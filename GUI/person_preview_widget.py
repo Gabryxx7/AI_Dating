@@ -33,10 +33,14 @@ class PersonPreviewWidget(QWidget):
         self.name = ""
         self.id = ""
         self.first_message = ""
-        self.json_button = QPushButton("JSON")
-        self.json_button.setVisible(False)
-        self.json_button.clicked.connect(self.open_json)
-        # self.json_button.setAlignment(Qt.AlignRights | Qt.AlignVCenter)
+        self.match_id = None
+        self.messages = None
+
+
+        self.get_msgs_button = QPushButton("Messages")
+        self.get_msgs_button.setVisible(False)
+        self.get_msgs_button.clicked.connect(self.get_messages)
+        # self.get_msgs_button.setAlignment(Qt.AlignRights | Qt.AlignVCenter)
 
         self.info_button = QPushButton("Get info")
         self.info_button.setVisible(False)
@@ -71,7 +75,7 @@ class PersonPreviewWidget(QWidget):
         preview_layout.addWidget(self.message_preview)
         self.layout.addLayout(preview_layout)
         self.layout.addStretch(1)
-        self.layout.addWidget(self.json_button)
+        self.layout.addWidget(self.get_msgs_button)
         self.layout.addWidget(self.info_button)
         self.layout.addStretch(2)
 
@@ -87,10 +91,23 @@ class PersonPreviewWidget(QWidget):
         # self.profile_pic.update_avatar_size(self.size())
         super(PersonPreviewWidget, self).resizeEvent(e)  # Do the default action on the parent class QLineEdit
 
-    def open_json(self):
-        self.json_viewer.load_data(self.base_path+"/data.yaml")
+    def get_messages(self):
+        if self.messages is None:
+            self.app.get_api_data(True, self.app.tinder_api.get_messages,
+                              [self.match_id, 100, self.app.tinder_api.page_token], {},
+                              finished_callback=self.messagesReceived,
+                              update_callback=self.app.updateBackgroundTaskInfo,
+                              info="Getting messages for " +self.name,
+                              tag="MessagesDownloader")
+    def messagesReceived(self, data):
+        # print("Gotten messages33!")
+        print(data)
+        if 'data' in data:
+            self.messages = data['data']['messages']
 
     def set_data(self, data, load_profile_pic=True, load_processed_profile_pic=False, load_images=False, load_processed_images=False):
+        person = None
+        type = ""
         if data is None:
             self.base_path = ""
             self.photos = None
@@ -99,7 +116,7 @@ class PersonPreviewWidget(QWidget):
             self.processed_photos_pixmap = None
             self.name = ""
             self.id = ""
-            self.bio = ""
+            self.match_id = None
         else:
             try:
                 person, type = self.app.tinder_api.get_person_data(data)
@@ -126,6 +143,8 @@ class PersonPreviewWidget(QWidget):
                     self.first_message = data['messages'][0]['message']
                 else:
                     self.first_message = ""
+                if "_id" in data:
+                    self.match_id = data["_id"]
 
                 if self.photos_pixmap is None:
                     if load_images:
@@ -143,7 +162,7 @@ class PersonPreviewWidget(QWidget):
         self.name_label.setText(self.name)
         self.message_preview.setText(self.first_message)
         # self.info_button.setVisible(self.json_viewer is not None and person is not None)
-        # self.json_button.setVisible(self.json_viewer is not None and person is not None)
+        self.get_msgs_button.setVisible(self.match_id is not None)
 
     def load_images_async(self, photos_paths, imgLoadedCallback):
         obj = ImgLoader(photos_paths)  # no parent!

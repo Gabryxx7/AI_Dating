@@ -18,12 +18,18 @@ class TinderApi():
             "User-agent": "Tinder/7.5.3 (iPhone; iOS 10.3.2; Scale/2.00)",
             "Accept": "application/json"
         }
+        self.get_message_headers = {
+            "accept": "application/json",
+            "platform": "web",
+            "tinder-version": "2.46.1"
+        }
 
         self.headers = self.get_headers.copy()
         self.headers['content-type'] = "application/json"
         self.host = "https://api.gotinder.com"
         self.browser = RoboBrowser()
         self.data_folder = data_folder
+        self.page_token=None
 
     def get_person_data(self, data):
         if "user" in data:
@@ -35,9 +41,9 @@ class TinderApi():
         else:
             person = data
             type = "person"
-
         return person, type
-    def download_people_data_api(self, data_list, folder_path, rename_images, amount, force_overwrite=False, log_to_widget=True, thread_update_signal=None):
+
+    def download_people_data_api(self, data_list, folder_path, photos, insta, messages, rename_images, amount, force_overwrite=False, log_to_widget=True, thread_update_signal=None):
         downloaded_data = None
         if not isinstance(data_list, list):
             data_list = [data_list]
@@ -49,7 +55,7 @@ class TinderApi():
             if thread_update_signal is not None:
                 thread_update_signal.emit("Downloading " +str(folder_path) +": " +str(i+1) + "/" + str(total) + " Skipped: " +str(total_skipped))
             log.i("API", "Downloading " + str(i + 1) + "/" + str(total), log_to_widget)
-            updated_data = self.download_person_data(folder_path, data_list[i], rename_images, force_overwrite, log_to_widget)
+            updated_data = self.download_person_data(folder_path, data_list[i], photos, insta, messages, rename_images, force_overwrite, log_to_widget)
             if updated_data is None:
                 total_skipped += 1
             else:
@@ -59,84 +65,70 @@ class TinderApi():
             log.i("API", "Data Downloaded!  Total Skipped: " + str(total_skipped), log_to_widget)
         return downloaded_data
 
-    def download_person_data(self, base_folder, data, rename_images, force_overwrite=False, log_to_widget=True, thread_update_signal=None):
-        log.d("API", "download_person_data: " + base_folder, log_to_widget)
+    def download_person_data(self, base_folder, data, photos, insta, messages, rename_images, force_overwrite=False, log_to_widget=True, thread_update_signal=None):
         person_data, type = self.get_person_data(data)
-        log.d("API", type+ " data: " + str(data.keys()), log_to_widget)
         id = person_data['_id']
         name = person_data['name']
-        log.i("API", "Downloading :" +type+": " + name + " " + id, log_to_widget)
         path = base_folder+"/"+str(name)+"_"+str(id)+"/"
         person_data['path'] = str(os.path.abspath(path))
-        log.d("API", "person path: " + person_data['path'], log_to_widget)
-        keys = person_data.keys()
-        to_download = ""
-        if 'instagram' in keys:
-            to_download = to_download + 'instagram'
-            if 'photos' in person_data['instagram'].keys():
-                to_download = to_download + '['+ str(len(person_data['instagram']['photos'])) +']'
-            else:
-                log.d("API", "no instagram photos", log_to_widget)
-        else:
-            log.d("API", "no instagram", log_to_widget)
-
-        to_download = to_download + ' + '
-        if 'photos' in keys:
-            to_download = to_download + 'photos' + '['+ str(len(person_data['photos'])) +']'
-        else:
-            log.d("API", "no photos", log_to_widget)
-        log.i("API", to_download, log_to_widget)
-
+        log.i("API", "Downloading " +type+": " + name + " " + id + " to: " +str(person_data['path']), log_to_widget)
         if os.path.exists(path):
-            log.i("API", "Already there", log_to_widget)
+            log.d("API", "Person path already exists: " + person_data['path'], log_to_widget)
         else:
             os.makedirs(path)
+            log.d("API", "Person path created: " + person_data['path'], log_to_widget)
         person_data['local_path'] = str(os.path.abspath(path))
-        log.d("API", "person path created", log_to_widget)
 
-        if 'insta' in to_download:
+        if insta and 'instagarm' in person_data:
             self.download_instagram_photos(person_data['instagram'], path, rename_images, force_overwrite, log_to_widget)
 
-        if 'photo' in to_download:
+        if photos and 'photos' in person_data:
             self.download_photos(person_data['photos'], path, rename_images, force_overwrite, log_to_widget)
 
-        self.download_metadata(data, path)
-        return data
-        # list_to_update.append(person_data)
-        # return False
+        if messages and 'match' in type:
+            data['messages'] = self.download_messages(data, log_to_widget)
 
-    def download_metadata(self, data, base_path):
+        self.write_data_to_file(data, path)
+        return data
+
+    def download_messages(self, match_data, log_to_widget=True, thread_update_signal=None):
+        log.d("API", "Downloading match messages", log_to_widget)
+        messages = self.get_messages(match_data["_id"], 100,  self.page_token, log_to_widget, thread_update_signal)
+        log.d("API", "Downloaded messages: " +str(match_data["_id"] +": " +str(messages)), log_to_widget)
+        if messages is not None and 'data' in messages:
+            return messages['data']['messages']
+        return []
+
+    def write_data_to_file(self, data, base_path, log_to_widget=True, thread_update_signal=None):
+        log.d("API", "Data written to: " +str(base_path), log_to_widget)
         with open(base_path+'data.yaml', 'w') as fp:
             yaml.dump(data, fp)
 
     def download_photos(self, photos_list, base_path, rename, force_overwrite=False, log_to_widget=True, thread_update_signal=None):
         for i in range(len(photos_list)):
             photo = photos_list[i]
+            log.d("API", "Downloading full-size photos", log_to_widget)
             filename, skipped = self.download_file(photo['url'], base_path,
                                                    rename, i, "", force_overwrite, log_to_widget)
-            if not skipped:
-                log.d("API", "Photo written absolute filename: "  + str(os.path.abspath(filename)), log_to_widget)
-                photo['local_path']= str(os.path.abspath(filename))
             if filename is not None:
                 photo['local_path'] = str(os.path.abspath(filename))
             if 'processedFiles' in photo:
                 processed_files = photo['processedFiles']
                 small_photo = processed_files[len(processed_files)-1]
+                log.d("API", "Downloading small photo", log_to_widget)
                 filename, skipped = self.download_file(small_photo['url'], base_path+"/small/",
                                                        rename, i, "_small", force_overwrite, log_to_widget=log_to_widget)
-                if not skipped:
-                    log.d("API", "Small Photo written filename: "  + str(os.path.abspath(filename)), log_to_widget)
                 if filename is not None:
                     small_photo['local_path'] = str(os.path.abspath(filename))
 
     def download_instagram_photos(self, instagram_data, base_path, rename, force_overwrite=False, log_to_widget=True, thread_update_signal=None):
-        if not 'photos' in instagram_data.keys():
+        if 'photos' not in instagram_data.keys():
+            log.d("API", "NO instagram photos", log_to_widget)
             return
+        log.d("API", "Downloading instagram photos", log_to_widget)
         for i in range(len(instagram_data['photos'])):
             filename, skipped = self.download_file(instagram_data['photos'][i]['image'], base_path+"instagram/",
                                                    rename, i, "", force_overwrite, log_to_widget)
-            if not skipped:
-                log.d("API", "Instagram photo written filename: " + str(os.path.abspath(filename)), log_to_widget)
             if filename is not None:
                 instagram_data['photos'][i]['local_path'] = str(os.path.abspath(filename))
 
@@ -148,19 +140,18 @@ class TinderApi():
             full_filename = base_path+file_name
             if not os.path.exists(base_path):
                 os.makedirs(base_path)
-                log.d("API", "file path created: " +base_path, log_to_widget)
+                log.d("API", "File path created: " +base_path, log_to_widget)
             if not os.path.exists(full_filename) or force_overwrite:
-                if force_overwrite:
-                    log.d("API", "Forcing Re-Download: " +full_filename, log_to_widget)
-                else:
-                    log.i("API", "Downloading: " +full_filename, log_to_widget)
                 self.browser.open(url)
                 with open(full_filename, "wb") as image_file:
                     image_file.write(self.browser.response.content)
-                    log.d("API", "File written: " +full_filename, log_to_widget)
+                    if force_overwrite:
+                        log.d("API", "Forcing Re-Download: " + full_filename, log_to_widget)
+                    else:
+                        log.i("API", "Downloading: " + full_filename, log_to_widget)
                     return full_filename, False
             else:
-                log.d("API", "Already Downloaded (force_overwrite=False): " +full_filename, log_to_widget)
+                log.d("API", "File already downloaded (force_overwrite=False): " +full_filename, log_to_widget)
                 return full_filename, True
         except Exception as e:
             log.e("API", "EXCEPTION!: " +str(e), log_to_widget)
@@ -182,43 +173,35 @@ class TinderApi():
             log.e("API", "Exception reading data from file : " + str(os.path.abspath(file_path)) +", Exc: " + str(e), log_to_widget)
             return None
 
-    def reload_data_from_disk(self, folder_path, merged_filename, force_overwrite=False, log_to_widget=True, thread_update_signal=None):
-        # print("log_to_widget is " +str(log_to_widget))
-        # print("thread_update_signal is " +str(thread_update_signal))
+    def reload_data_from_disk(self, folder_path, merged_filename, photos, insta, messages, force_overwrite=False, log_to_widget=True, thread_update_signal=None):
         list = []
         try:
             for subdir, dirs, files in os.walk(folder_path):
                 total_dirs = len(dirs)
                 for i in range(len(dirs)):
-                    dir = dirs[i]
-                    data_path = os.path.join(subdir, dir) + "/"
+                    data_path = os.path.join(subdir, dirs[i]) + "/"
                     data_file_path = data_path + "data.yaml"
                     try:
                         if os.path.exists(data_file_path):
                             with open(data_file_path) as yf:
                                 data = yaml.safe_load(yf)
                                 person_data, type = self.get_person_data(data)
-                                person_data['local_path'] = os.path.abspath(data_path) # Updating the data path just in case
-                                log.d("API", "Checking for local photos", log_to_widget)
-                                if 'photos' in person_data:
-                                    log.d("API", "NO local photos", log_to_widget)
+                                person_data['path'] = os.path.abspath(data_path) # Updating the data path just in case
+                                if photos and 'photos' in person_data:
                                     self.download_photos(person_data['photos'], data_path, True, force_overwrite, log_to_widget=log_to_widget)
 
-                                log.d("API", "Checking for instagram photos", log_to_widget)
-                                if 'instagram' in person_data and 'photos' in person_data['instagram']:
-                                    log.d("API", "NO instagram photos", log_to_widget)
+                                if insta and 'instagram' in person_data and 'photos' in person_data['instagram']:
                                     self.download_instagram_photos(person_data['instagram'], data_path, True, force_overwrite, log_to_widget=log_to_widget)
-
-                                person_data['path'] = os.path.abspath(data_path)
-
-                                log.d("API", "Updating data file", log_to_widget)
-                                self.download_metadata(person_data, data_path)
+                                if messages and 'match' in type:
+                                    data['messages'] = self.download_messages(data, log_to_widget)
+                                log.d("API", "Updating "+ type+" data file", log_to_widget)
+                                self.write_data_to_file(data, data_path)
                                 log.d("API", "Updated", log_to_widget)
                                 list.append(data)
                             log.i("API",
-                                  str(i + 1) + "/" + str(total_dirs) + " - " + str(dir) + " " + person_data['name'], log_to_widget)
+                                  str(i + 1) + "/" + str(total_dirs) + " - " + str(dirs[i]) + " " + person_data['name'], log_to_widget)
                         else:
-                            log.i("API", str(i + 1) + "/" + str(total_dirs) + " - " + str(dir) + " SKIPPED", log_to_widget)
+                            log.i("API", str(i + 1) + "/" + str(total_dirs) + " - " + str(dirs[i]) + " SKIPPED", log_to_widget)
                     except Exception as e:
                         log.e("API", "Exception reloading data " + str(e), log_to_widget)
                     if thread_update_signal is not None:
@@ -262,6 +245,7 @@ class TinderApi():
             tinder_auth_token = json_request["data"]["api_token"]
             self.headers.update({"X-Auth-Token": tinder_auth_token})
             self.get_headers.update({"X-Auth-Token": tinder_auth_token})
+            self.get_message_headers.update({"X-Auth-Token": tinder_auth_token})
             log.s("API", "You have been successfully authorized!")
             return tinder_auth_token
         except Exception as e:
@@ -424,7 +408,22 @@ class TinderApi():
         except requests.exceptions.RequestException as e:
             log.e("API", "Something went wrong. Could not get that person:" +str(e), log_to_widget)
 
-    def send_msg(self, match_id, msg):
+    def get_messages(self, match_id, count=100, page_token=None, log_to_widget=True, thread_update_signal=None):
+        # https://api.gotinder.com/v2/matches/5e762f611d443d01005c86975ea8db0a728e280100783a6e/messages?locale=en&count=100
+        # https://api.gotinder.com/v2/matches/5cae0e962d5de015002490965ea8db0a728e280100783a6e/messages?locale=en&count=100&page_token=
+        try:
+            path = '/v2/matches/%s/messages?locale=en&count=%s' % (match_id, count)
+            if page_token is not None:
+                path += "&page_token=%s" % page_token
+            r = requests.get(self.host+path, headers=self.headers)
+            # print("Gotten messages11!" +str(r) +": " +str(r.request))
+            r_json = r.json()
+            r_json["match_id"] = match_id
+            return r_json
+        except requests.exceptions.RequestException as e:
+            log.e("API", "Something went wrong. Could not get messages:" +str(e), log_to_widget)
+
+    def send_msg(self, match_id, msg, log_to_widget=True, thread_update_signal=None):
         try:
             url = self.host + '/user/matches/%s' % match_id
             r = requests.post(url, headers=self.headers,
@@ -494,7 +493,7 @@ class TinderApi():
             r = requests.get(url, headers=self.headers)
             return r.json()
         except requests.exceptions.RequestException as e:
-            log.e("API", "Something went wrong. Could not get your match info:" +str(e), log_to_widget)
+            log.e("API", "Something went wrong. Could not get your match iself.page_tokennfo:" +str(e), log_to_widget)
 
     def all_matches(self, amount=60, message=0, page_token=None, log_to_widget=True, thread_update_signal=None):
         try:
@@ -513,6 +512,7 @@ class TinderApi():
             if 'next_page_token' in json['data']:
                 new_data = self.all_matches(amount, message, json['data']['next_page_token'])
                 json['data']['matches'] = json['data']['matches'] + new_data['data']['matches']
+                self.page_token = json['data']['next_page_token']
             elif message <= 0:
                 new_data = self.all_matches(amount, 1, None)
                 json['data']['matches'] = json['data']['matches'] + new_data['data']['matches']

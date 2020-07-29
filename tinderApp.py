@@ -135,10 +135,10 @@ class TinderApp(QApplication):
                           update_callback=self.updateBackgroundTaskInfo,
                           info="Getting profile data",
                           tag="ProfileGetter")
-    def setProfileData(self, new_data, force_overwrite=True):
+    def setProfileData(self, new_data, force_overwrite=True, photos=True, insta=True, rename_images=False):
         self.profile_info = new_data
         self.get_api_data(True, self.tinder_api.download_people_data_api,
-                                [self.profile_info, self.profile_folder, False, 0],
+                                [self.profile_info, self.profile_folder, photos, insta, False, rename_images, 0],
                                 {"force_overwrite": force_overwrite},
                                 finished_callback=self.updateProfile,
                                 update_callback=self.updateBackgroundTaskInfo,
@@ -160,17 +160,17 @@ class TinderApp(QApplication):
                           info="Reading data from: " + str(self.matches_file),
                           finished_callback=self.setMatches,
                           tag="MatchesDownloader")
-    def reload_matches(self, doAsync=False, force_overwrite=False):
+    def reload_matches(self, doAsync=False, photos=True, insta=True, messages=True, force_overwrite=False):
         self.get_api_data(doAsync, self.tinder_api.reload_data_from_disk,
-                          [self.matches_folder, self.matches_file],
+                          [self.matches_folder, self.matches_file, photos, insta, messages],
                           {"force_overwrite": force_overwrite},
                           finished_callback=self.setMatches,
                           update_callback=self.updateBackgroundTaskInfo,
                           info="Reloading Matches",
                           tag="MatchesReloader")
-    def download_new_matches(self,  rename_images, amount, force_overwrite=False):
+    def download_new_matches(self, photos=True, insta=True, messages=True,  rename_images=False, amount=0, force_overwrite=False):
         self.get_api_data(True, self.tinder_api.download_people_data_api,
-                          [self.new_matches, self.matches_folder, rename_images, amount],
+                          [self.new_matches, self.matches_folder, photos, insta, messages, rename_images, amount],
                           {"force_overwrite": force_overwrite},
                           finished_callback=self.updateMatches,
                           update_callback=self.updateBackgroundTaskInfo,
@@ -207,17 +207,17 @@ class TinderApp(QApplication):
                           finished_callback=self.setRecommendations,
                           tag="RecomendationsDownloader")
     # Redownload recommendations and writes the output to file file containing all recommendations
-    def reload_recommendations(self, doAsync=False, force_overwrite=False):
+    def reload_recommendations(self, doAsync=False,photos=True, insta=True, force_overwrite=False):
         self.get_api_data(doAsync, self.tinder_api.reload_data_from_disk,
-                          [self.recommendations_folder, self.recommendations_file],
+                          [self.recommendations_folder, self.recommendations_file, photos, insta, False],
                           {"force_overwrite": force_overwrite},
                           finished_callback=self.setRecommendations,
                           update_callback=self.updateBackgroundTaskInfo,
                           info="Reloading Recommendations",
                           tag="RecommendationsReloader")
-    def download_new_recommendations(self, rename_images, amount, force_overwrite=False):
+    def download_new_recommendations(self, photos=True, insta=True, rename_images=False, amount=0, force_overwrite=False):
         self.get_api_data(True, self.tinder_api.download_people_data_api,
-                          [self.new_recommendations, self.recommendations_folder, rename_images, amount],
+                          [self.new_recommendations, self.recommendations_folder, photos, insta, False, rename_images, amount],
                           {"force_overwrite": force_overwrite},
                           finished_callback=self.updateRecommendations,
                           update_callback=self.updateBackgroundTaskInfo,
@@ -305,7 +305,7 @@ class TinderApp(QApplication):
             self.update_status_bar()
             self.read_recommendations(doAsync)
             self.read_matches(doAsync)
-            self.read_profile(doAsync) #it should be None at the beginning, triggering the get_self_data
+            # self.read_profile(doAsync) #it should be None at the beginning, triggering the get_self_data
         else:
             self.window = lw.LoginWindow(self, parsed_args)
             self.window.show()

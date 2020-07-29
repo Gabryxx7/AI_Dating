@@ -61,10 +61,18 @@ class FeaturesButtonList(QWidget):
         self.rename_recommendations_images_checkbox.setChecked(True)
         self.rename_recommendations_images_checkbox.setEnabled(False)
 
-        self.force_recommendations_download_checkbox = QCheckBox("Force redownload")
+        self.force_recommendations_download_checkbox = QCheckBox("Force overwrite")
         self.force_recommendations_download_checkbox.setStatusTip("Overwrites files if they exist already")
         self.force_recommendations_download_checkbox.setChecked(False)
         self.force_recommendations_download_checkbox.setEnabled(False)
+        
+        self.recommendations_photos_checkbox = QCheckBox("Photos")
+        self.recommendations_photos_checkbox.setChecked(True)
+        self.recommendations_photos_checkbox.setEnabled(False)
+
+        self.recommendations_instagram_checkbox = QCheckBox("Instagram")
+        self.recommendations_instagram_checkbox.setChecked(True)
+        self.recommendations_instagram_checkbox.setEnabled(False)
 
         self.download_recommendations_amount = QSpinBox()
         self.download_recommendations_amount.setStatusTip("How many recommendations to download? (0 for all)")
@@ -88,8 +96,16 @@ class FeaturesButtonList(QWidget):
         h_layout.addWidget(self.recommendations_counter)
         h_layout.addWidget(self.recommendations_new_counter)
         self.recommendations_download_layout.addLayout(h_layout)
-        self.recommendations_download_layout.addWidget(self.rename_recommendations_images_checkbox)
-        self.recommendations_download_layout.addWidget(self.force_recommendations_download_checkbox)
+        valyout1 = QVBoxLayout()
+        valyout2 = QVBoxLayout()
+        halyout1 = QHBoxLayout()
+        valyout1.addWidget(self.rename_recommendations_images_checkbox)
+        valyout1.addWidget(self.force_recommendations_download_checkbox)
+        valyout2.addWidget(self.recommendations_photos_checkbox)
+        valyout2.addWidget(self.recommendations_instagram_checkbox)
+        halyout1.addLayout(valyout1)
+        halyout1.addLayout(valyout2)
+        self.recommendations_download_layout.addLayout(halyout1)
         self.recommendations_download_layout.addWidget(self.download_recommendations_amount)
         self.recommendations_download_layout.addWidget(self.download_recommendations_data_button)
 
@@ -120,10 +136,22 @@ class FeaturesButtonList(QWidget):
         self.rename_matches_images_checkbox.setChecked(True)
         self.rename_matches_images_checkbox.setEnabled(False)
 
-        self.force_matches_download_checkbox = QCheckBox("Force redownload")
+        self.force_matches_download_checkbox = QCheckBox("Force overwrite")
         self.force_matches_download_checkbox.setStatusTip("Overwrites files if they exist already")
         self.force_matches_download_checkbox.setChecked(False)
         self.force_matches_download_checkbox.setEnabled(False)
+
+        self.matches_photos_checkbox = QCheckBox("Photos")
+        self.matches_photos_checkbox.setChecked(True)
+        self.matches_photos_checkbox.setEnabled(False)
+
+        self.matches_instagram_checkbox = QCheckBox("Instagram")
+        self.matches_instagram_checkbox.setChecked(True)
+        self.matches_instagram_checkbox.setEnabled(False)
+
+        self.matches_messages_checkbox = QCheckBox("Messages")
+        self.matches_messages_checkbox.setChecked(True)
+        self.matches_messages_checkbox.setEnabled(False)
 
         self.download_matches_amount = QSpinBox()
         self.download_matches_amount.setStatusTip("How many matches to download? (0 for all)")
@@ -147,8 +175,17 @@ class FeaturesButtonList(QWidget):
         h_layout.addWidget(self.matches_counter)
         h_layout.addWidget(self.matches_new_counter)
         self.matches_download_layout.addLayout(h_layout)
-        self.matches_download_layout.addWidget(self.rename_matches_images_checkbox)
-        self.matches_download_layout.addWidget(self.force_matches_download_checkbox)
+        valyout1 = QVBoxLayout()
+        valyout2 = QVBoxLayout()
+        halyout1 = QHBoxLayout()
+        valyout1.addWidget(self.rename_matches_images_checkbox)
+        valyout1.addWidget(self.force_matches_download_checkbox)
+        valyout2.addWidget(self.matches_photos_checkbox)
+        valyout2.addWidget(self.matches_instagram_checkbox)
+        valyout2.addWidget(self.matches_messages_checkbox)
+        halyout1.addLayout(valyout1)
+        halyout1.addLayout(valyout2)
+        self.matches_download_layout.addLayout(halyout1)
         self.matches_download_layout.addWidget(self.download_matches_amount)
         self.matches_download_layout.addWidget(self.download_matches_data_button)
 
@@ -177,20 +214,25 @@ class FeaturesButtonList(QWidget):
         self.update_widgets(self.app.matches, self.app.new_matches, self.get_matches_button,
                             self.reload_matches_button, self.download_matches_data_button,
                             self.download_matches_amount, self.rename_matches_images_checkbox,
-                            self.force_matches_download_checkbox, self.matches_new_counter, self.matches_counter)
+                            self.force_matches_download_checkbox, self.matches_new_counter, self.matches_counter,
+                            self.matches_photos_checkbox, self.matches_instagram_checkbox)
+        self.matches_messages_checkbox.setEnabled(self.download_matches_data_button.isEnabled())
 
     def update_recommendations_widgets(self):
         log.d("FEATURES", str("Updating Recommendations Widgets"))
         self.update_widgets(self.app.recommendations, self.app.new_recommendations, self.get_recommendations_button,
                             self.reload_recommendations_button, self.download_recommendations_data_button,
-                       self.download_recommendations_amount, self.rename_recommendations_images_checkbox,
-                        self.force_recommendations_download_checkbox, self.recommendations_new_counter, self.recommendations_counter)
+                            self.download_recommendations_amount, self.rename_recommendations_images_checkbox,
+                            self.force_recommendations_download_checkbox, self.recommendations_new_counter, self.recommendations_counter,
+                            self.recommendations_photos_checkbox, self.recommendations_instagram_checkbox)
 
-    def update_widgets(self, data, new_data, get_button, reload_button, download_button, amount_spinner, rename_checkbox, force_checkbox, new_data_counter, data_counter):
+    def update_widgets(self, data, new_data, get_button, reload_button, download_button, amount_spinner, rename_checkbox, force_checkbox, new_data_counter, data_counter, photo_checkbox, insta_checkbox):
         download_button.setEnabled(new_data is not None)
         amount_spinner.setEnabled(download_button.isEnabled())
         rename_checkbox.setEnabled(download_button.isEnabled())
         force_checkbox.setEnabled(download_button.isEnabled())
+        photo_checkbox.setEnabled(download_button.isEnabled())
+        insta_checkbox.setEnabled(download_button.isEnabled())
         if new_data is not None:
             new_data_counter.setText(str(len(new_data)))
             get_button.setText('Update List')
@@ -204,22 +246,32 @@ class FeaturesButtonList(QWidget):
 
 
     def download_recommendations(self):
-        self.app.download_new_recommendations(self.rename_recommendations_images_checkbox.isChecked(),
-                                            self.download_recommendations_amount.value(),
-                                            self.force_recommendations_download_checkbox.isChecked())
+        self.app.download_new_recommendations(self.recommendations_photos_checkbox.isChecked(),
+                                            self.recommendations_instagram_checkbox.isChecked(),
+                                              self.rename_recommendations_images_checkbox.isChecked(),
+                                              self.download_recommendations_amount.value(),
+                                              self.force_recommendations_download_checkbox.isChecked())
         # self.download_recommendations_data_button.setText("Stop")
         # self.download_recommendations_data_button.setStyleSheet("QPushButton{background-color: red;}")
 
     def download_matches(self):
-        self.app.download_new_matches(self.rename_matches_images_checkbox.isChecked(),
-                                     self.download_matches_amount.value(),
-                                     self.force_matches_download_checkbox.isChecked())
+        self.app.download_new_matches(self.matches_photos_checkbox.isChecked(),
+                                      self.matches_instagram_checkbox.isChecked(),
+                                      self.matches_messages_checkbox.isChecked(),
+                                      self.rename_matches_images_checkbox.isChecked(),
+                                      self.download_matches_amount.value(),
+                                      self.force_matches_download_checkbox.isChecked())
         # self.download_matches_data_button.setText("Stop")
         # self.download_matches_data_button.setStyleSheet("QPushButton{background-color: red;}")
 
     def reload_recommendations(self):
-        self.app.reload_recommendations(True, self.force_matches_download_checkbox.isChecked())
+        self.app.reload_recommendations(True, self.recommendations_photos_checkbox.isChecked(),
+                                    self.recommendations_instagram_checkbox.isChecked(),
+                                        self.force_matches_download_checkbox.isChecked())
 
     def reload_matches(self):
-        self.app.reload_matches(True,  self.force_matches_download_checkbox.isChecked())
+        self.app.reload_matches(True, self.matches_photos_checkbox.isChecked(),
+                                      self.matches_instagram_checkbox.isChecked(),
+                                      self.matches_messages_checkbox.isChecked(),
+                                    self.force_matches_download_checkbox.isChecked())
 
