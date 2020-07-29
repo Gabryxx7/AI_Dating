@@ -17,9 +17,10 @@ class PeopleList(QWidget):
         self.statusBar = self.parent.statusBar
 
         self.json_viewer = json_viewer
-        self.title_label = QLabel(title)
-        self.title_label.setAlignment(Qt.AlignTop)
-        # self.layout.addWidget(self.title_label)
+        self.search_box = QLineEdit()
+        self.search_box.setPlaceholderText("Search "+title +"...")
+        self.layout.addWidget(self.search_box)
+        self.search_box.textChanged.connect(self.on_searchTextChanged)
 
         """ List as a Widget + QScrollArea"""
         # self.list = QWidget() # Widget that contains the collection of Vertical Box
@@ -59,6 +60,21 @@ class PeopleList(QWidget):
             }*/
 
             """)
+
+    @Slot(str)
+    def on_searchTextChanged(self, text):
+        for row in range(self.list.count()):
+            it = self.list.item(row)
+            widget = self.list.itemWidget(it)
+            if text:
+                it.setHidden(not self.filter(text.lower(), widget.name.lower()))
+            else:
+                it.setHidden(False)
+
+    def filter(self, text, keywords):
+        # foo filter
+        # in the example the text must be in keywords
+        return text in keywords
 
         # self.thread = QThread()  # 1a - create Worker and Thread inside the Form. No parent!
         # self.obj = worker.Worker()  # no parent!

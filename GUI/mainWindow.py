@@ -85,9 +85,9 @@ class MainWindow(QMainWindow):
         self.main_vlayout.addLayout(self.lists_hlayout, 70)
         self.main_vlayout.addWidget(log.logWidget, 30)
 
-        self.main_hlayout.addWidget(self.matches_list, 20)
+        self.main_hlayout.addWidget(self.matches_list, 45)
         self.main_hlayout.addWidget(self.json_view, 15)
-        self.main_hlayout.addLayout(self.main_vlayout, 50)
+        self.main_hlayout.addLayout(self.main_vlayout, 25)
         self.main_hlayout.addWidget(self.features_panel, 15)
 
         self.main_widget.setLayout(self.main_hlayout)

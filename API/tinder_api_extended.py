@@ -55,7 +55,7 @@ class TinderApi():
             if thread_update_signal is not None:
                 thread_update_signal.emit("Downloading " +str(folder_path) +": " +str(i+1) + "/" + str(total) + " Skipped: " +str(total_skipped))
             log.i("API", "Downloading " + str(i + 1) + "/" + str(total), log_to_widget)
-            updated_data = self.download_person_data(folder_path, data_list[i], photos, insta, messages, rename_images, force_overwrite, log_to_widget)
+            updated_data = self.download_person_data(folder_path, data_list[i], photos, insta, messages, rename_images, force_overwrite, log_to_widget, thread_update_signal)
             if updated_data is None:
                 total_skipped += 1
             else:
@@ -80,20 +80,20 @@ class TinderApi():
         person_data['local_path'] = str(os.path.abspath(path))
 
         if insta and 'instagarm' in person_data:
-            self.download_instagram_photos(person_data['instagram'], path, rename_images, force_overwrite, log_to_widget)
+            self.download_instagram_photos(person_data['instagram'], path, rename_images, force_overwrite, log_to_widget, thread_update_signal)
 
         if photos and 'photos' in person_data:
-            self.download_photos(person_data['photos'], path, rename_images, force_overwrite, log_to_widget)
+            self.download_photos(person_data['photos'], path, rename_images, force_overwrite, log_to_widget, thread_update_signal)
 
         if messages and 'match' in type:
-            data['messages'] = self.download_messages(data, log_to_widget)
+            data['messages'] = self.download_messages(data, log_to_widget, thread_update_signal)
 
-        self.write_data_to_file(data, path)
+        self.write_data_to_file(data, path, log_to_widget, thread_update_signal)
         return data
 
     def download_messages(self, match_data, log_to_widget=True, thread_update_signal=None):
         log.d("API", "Downloading match messages", log_to_widget)
-        messages = self.get_messages(match_data["_id"], 100,  self.page_token, log_to_widget, thread_update_signal)
+        messages = self.get_messages(match_data, 100, None, log_to_widget, thread_update_signal)
         log.d("API", "Downloaded messages: " +str(match_data["_id"] +": " +str(messages)), log_to_widget)
         if messages is not None and 'data' in messages:
             return messages['data']['messages']
@@ -195,7 +195,7 @@ class TinderApi():
                                 if messages and 'match' in type:
                                     data['messages'] = self.download_messages(data, log_to_widget)
                                 log.d("API", "Updating "+ type+" data file", log_to_widget)
-                                self.write_data_to_file(data, data_path)
+                                self.write_data_to_file(data, data_path, log_to_widget, thread_update_signal)
                                 log.d("API", "Updated", log_to_widget)
                                 list.append(data)
                             log.i("API",
@@ -408,17 +408,23 @@ class TinderApi():
         except requests.exceptions.RequestException as e:
             log.e("API", "Something went wrong. Could not get that person:" +str(e), log_to_widget)
 
-    def get_messages(self, match_id, count=100, page_token=None, log_to_widget=True, thread_update_signal=None):
+    def get_messages(self, match_data=None, count=100, page_token=None, log_to_widget=True, thread_update_signal=None):
         # https://api.gotinder.com/v2/matches/5e762f611d443d01005c86975ea8db0a728e280100783a6e/messages?locale=en&count=100
         # https://api.gotinder.com/v2/matches/5cae0e962d5de015002490965ea8db0a728e280100783a6e/messages?locale=en&count=100&page_token=
         try:
-            path = '/v2/matches/%s/messages?locale=en&count=%s' % (match_id, count)
+            path = '/v2/matches/%s/messages?locale=en&count=%s' % (match_data["_id"], count)
+
             if page_token is not None:
                 path += "&page_token=%s" % page_token
             r = requests.get(self.host+path, headers=self.headers)
-            # print("Gotten messages11!" +str(r) +": " +str(r.request))
+            print("Messages url: " +str(self.host+path))
             r_json = r.json()
-            r_json["match_id"] = match_id
+            if 'next_page_token' in r_json['data']:
+                new_data = self.get_messages(match_data, 100, r_json['data']['next_page_token'], log_to_widget, thread_update_signal)
+                for message in new_data['data']['messages']:
+                    message['page_token'] = page_token # This will be needed to get messages
+                r_json['data']['messages'] = r_json['data']['messages'] + new_data['data']['messages']
+            r_json["match_id"] = match_data["_id"]
             return r_json
         except requests.exceptions.RequestException as e:
             log.e("API", "Something went wrong. Could not get messages:" +str(e), log_to_widget)
@@ -511,6 +517,8 @@ class TinderApi():
             log.i("API", "all_matches: Got response. Status: " + str(json['meta']['status']) + ": " +utils.error_code_to_message[json['meta']['status']], log_to_widget)
             if 'next_page_token' in json['data']:
                 new_data = self.all_matches(amount, message, json['data']['next_page_token'])
+                for match in new_data['data']['matches']:
+                    match['page_token'] = page_token # This will be needed to get messages
                 json['data']['matches'] = json['data']['matches'] + new_data['data']['matches']
                 self.page_token = json['data']['next_page_token']
             elif message <= 0:

@@ -34,21 +34,19 @@ class PersonDetailsWidget(QWidget):
 
         self.name_label = QLabel(self.name)
         self.name_label.setAlignment(Qt.AlignHCenter | Qt.AlignVCenter)
-        self.name_label.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Expanding)
         self.name_label.setContentsMargins(10,0,10,0)
         self.name_label.setStyleSheet("""
             .QLabel{
                 font-weight: bold;
-                font-size: 18px;
+                font-size: 18%;
             }""")
 
         self.bio_label = QLabel(self.bio)
         self.bio_label.setAlignment(Qt.AlignLeft | Qt.AlignVCenter)
-        self.bio_label.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Expanding)
         self.bio_label.setContentsMargins(10,0,10,0)
         self.bio_label.setStyleSheet("""
                     .QLabel{
-                        font-size: 14px;
+                        font-size: 11%;
                     }""")
 
         self.profile_pic = AvatarLabel("", QSize(250,250))

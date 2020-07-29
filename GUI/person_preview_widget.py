@@ -25,6 +25,7 @@ class PersonPreviewWidget(QWidget):
 
         self.json_viewer = json_viewer
 
+        self.data = data
         self.base_path = ""
         self.photos = None
         self.photos_pixmap = None
@@ -35,7 +36,6 @@ class PersonPreviewWidget(QWidget):
         self.first_message = ""
         self.match_id = None
         self.messages = None
-
 
         self.get_msgs_button = QPushButton("Messages")
         self.get_msgs_button.setVisible(False)
@@ -94,7 +94,7 @@ class PersonPreviewWidget(QWidget):
     def get_messages(self):
         if self.messages is None:
             self.app.get_api_data(True, self.app.tinder_api.get_messages,
-                              [self.match_id, 100, self.app.tinder_api.page_token], {},
+                              [], {'match_data':self.data, 'count':100, 'page_token':None},
                               finished_callback=self.messagesReceived,
                               update_callback=self.app.updateBackgroundTaskInfo,
                               info="Getting messages for " +self.name,
@@ -143,7 +143,7 @@ class PersonPreviewWidget(QWidget):
                     self.first_message = data['messages'][0]['message']
                 else:
                     self.first_message = ""
-                if "_id" in data:
+                if "message_count" in data:
                     self.match_id = data["_id"]
 
                 if self.photos_pixmap is None:
