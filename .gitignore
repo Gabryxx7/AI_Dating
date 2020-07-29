@@ -1,0 +1,21 @@
+proxying.txt
+config.py
+api_abstract.py
+*.pyc
+__pycache__
+find.py
+*.log
+*.egg-info
+/GUI/recommendations/
+/settings.yaml
+/settings_BAK.yaml
+/Tinder API.ipynb
+/venv/
+/Data/recommendations/
+/Data/*
+/Data/matches
+.idea
+dist
+build
+log.txt
+fault_handler.log

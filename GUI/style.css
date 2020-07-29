@@ -1,0 +1,35 @@
+QPushButton{
+    background-color: salmon;
+    border-radius: 4px;
+    padding: 5%;
+    color: #FFFFFF;
+}
+
+
+QPushButton:disabled{
+    background-color: blue;
+    border-radius: 4px;
+    padding: 5%;
+    color: #CDCDCD;
+}
+
+QPushButton:hover{
+    background-color: darkgoldenrod;
+    border-radius: 4px;
+    padding: 5%;
+    color: #FFFFFF;
+    box-shadow: 2px 1px 3px 1px rgba(5,5,5,0.27);
+}
+
+QLineEdit{
+    border: none;
+    border-radius: 10%;
+    padding: 10%;
+    background-color: #EEEEEE;
+    box-shadow: 2px 1px 3px 1px #000000;
+}
+
+QMainWindow{
+    background-color: #FFFFFF;
+    padding: 5%;
+}
