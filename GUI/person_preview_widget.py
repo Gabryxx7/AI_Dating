@@ -7,7 +7,7 @@ from GUI.avatar_label import AvatarLabel
 from Threading.data_reloader import ImgLoader
 
 class PersonPreviewWidget(QWidget):
-    def __init__(self, parent, data=None, load_images=False, json_viewer=None):
+    def __init__(self, parent, data=None, load_images=False, json_viewer=None, chat_widget=None):
         super(PersonPreviewWidget, self).__init__(parent)
         self.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Expanding)
         self.layout = QHBoxLayout()
@@ -24,6 +24,7 @@ class PersonPreviewWidget(QWidget):
         self.statusBar = self.parent.statusBar
 
         self.json_viewer = json_viewer
+        self.chat_widget = chat_widget
 
         self.data = data
         self.base_path = ""
@@ -93,21 +94,14 @@ class PersonPreviewWidget(QWidget):
 
     def get_messages(self):
         if self.messages is None:
-            self.app.get_api_data(True, self.app.tinder_api.get_messages,
-                              [], {'match_data':self.data, 'count':100, 'page_token':None},
-                              finished_callback=self.messagesReceived,
-                              update_callback=self.app.updateBackgroundTaskInfo,
-                              info="Getting messages for " +self.name,
-                              tag="MessagesDownloader")
+            self.app.get_messages(self.data, self.messagesReceived, self.name)
+
     def messagesReceived(self, data):
-        # print("Gotten messages33!")
         print(data)
         if 'data' in data:
             self.messages = data['data']['messages']
 
     def set_data(self, data, load_profile_pic=True, load_processed_profile_pic=False, load_images=False, load_processed_images=False):
-        person = None
-        type = ""
         if data is None:
             self.base_path = ""
             self.photos = None
@@ -117,6 +111,7 @@ class PersonPreviewWidget(QWidget):
             self.name = ""
             self.id = ""
             self.match_id = None
+            self.messages = None
         else:
             try:
                 person, type = self.app.tinder_api.get_person_data(data)
@@ -140,10 +135,12 @@ class PersonPreviewWidget(QWidget):
                     if '_id' in person:
                         self.id = person['_id']
                 if 'messages' in data and len(data['messages']) > 0:
+                    self.messages = data['messages']
                     self.first_message = data['messages'][0]['message']
                 else:
+                    self.messages = None
                     self.first_message = ""
-                if "message_count" in data:
+                if "message_count" in data: # for unread messages
                     self.match_id = data["_id"]
 
                 if self.photos_pixmap is None:
@@ -195,3 +192,10 @@ class PersonPreviewWidget(QWidget):
 
     def get_match_info(self):
         self.app.get_match_info(self.id, self.name)
+
+    def itemSelected(self):
+        if self.json_viewer is not None:
+            self.json_viewer.load_data(self.base_path+"/data.yaml")
+        if self.chat_widget is not None:
+            self.chat_widget.addMessages(messages_list=self.messages, clear_messages=True)
+            # self.chat_widget.addMessages(messages_list=self.messages, clear_messages=True)

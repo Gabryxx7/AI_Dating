@@ -109,14 +109,16 @@ class TinderApp(QApplication):
         except Exception as e:
             log.e("API", "Exception saving " + file_path + " json: " + str(e))
 
-    def get_api_data(self, doAsync=False, api_fun=None, args=[], kwargs={}, finished_callback=None, update_callback=None, info=None, tag=None):
+    def get_api_data(self, doAsync=False, api_fun=None, args=[], kwargs={},
+                     finished_callback=None, callback_args=None, callback_kwargs=None,
+                     update_callback=None, info=None, tag=None):
         if not doAsync:
             kwargs["log_to_widget"] = False
             kwargs["thread_update_signal"] = None
             result = api_fun(*args, **kwargs)
             self.new_data_callback(result, finished_callback)
         else:
-            obj = APIBackgroundWorker(api_fun, args, kwargs, callback=finished_callback)
+            obj = APIBackgroundWorker(api_fun, args, kwargs, callback=finished_callback, callback_args=callback_args, callback_kwargs=callback_kwargs)
             if tag is not None:
                 obj.tag = tag
             obj.signals.dataReceived.connect(self.new_data_callback)  # 2 - Connect Worker`s Signals to Form method slots to post data.
@@ -128,23 +130,47 @@ class TinderApp(QApplication):
             else:
                 self.addBackgroundTask(obj, info)
 
-    def read_profile(self, doAsync=True):
-        self.get_api_data(doAsync, self.tinder_api.get_self,
-                          [], {},
-                          finished_callback=self.setProfileData,
-                          update_callback=self.updateBackgroundTaskInfo,
-                          info="Getting profile data",
-                          tag="ProfileGetter")
-    def setProfileData(self, new_data, force_overwrite=True, photos=True, insta=True, rename_images=False):
-        self.profile_info = new_data
-        self.get_api_data(True, self.tinder_api.download_people_data_api,
-                                [self.profile_info, self.profile_folder, photos, insta, False, rename_images, 0],
-                                {"force_overwrite": force_overwrite},
-                                finished_callback=self.updateProfile,
-                                update_callback=self.updateBackgroundTaskInfo,
-                                info="Downloading Profile data to: " + str(self.profile_folder),
-                                tag="ProfileDownloader")
-    def updateProfile(self, downloaded_data):
+    def get_profile(self, doAsync=True, force_update=False):
+        try:
+            with open(self.profile_file, "r") as pf:
+                data= json.load(pf)
+            log.d("APP", "Profile file read: " +str(data))
+            self.setProfileData(data, download_data=False)
+        except Exception as e:
+            log.e("APP", "No profile found")
+
+        if self.profile_info is None or force_update:
+            self.get_api_data(doAsync, self.tinder_api.get_self,
+                              [], {},
+                              finished_callback=self.setProfileData,
+                              callback_kwargs={'download_data':True},
+                              update_callback=self.updateBackgroundTaskInfo,
+                              info="Getting profile data",
+                              tag="ProfileGetter")
+    def setProfileData(self, new_data, download_data=False):
+        log.d("APP", "New profile info, download: " +str(download_data))
+        if new_data is not None:
+            self.profile_info = new_data
+        if self.profile_info is None:
+            return
+        if self.window is not None and self.window.chat_widget is not None:
+            self.window.chat_widget.setLeftId(self.profile_info["_id"])
+
+        if download_data:
+            self.get_api_data(True, self.tinder_api.download_person_data,
+                                    [self.profile_info, self.profile_folder, True, True, False, True],
+                                    {"force_overwrite": True},
+                                    finished_callback=self.updateProfileData,
+                                    update_callback=self.updateBackgroundTaskInfo,
+                                    info="Downloading Profile data to: " + str(self.profile_folder),
+                                    tag="ProfileDownloader")
+    def updateProfileData(self, downloaded_data):
+        try:
+            with open(self.profile_file, 'w') as fp:
+                json.dump(downloaded_data, fp)
+            log.i("API", "Profile data written to: " + self.profile_file)
+        except Exception as e:
+            log.e("API", "Exception saving " + self.profile_file + " json: " + str(e))
         pass
 
     def get_matches(self, doAsync=True):
@@ -238,7 +264,12 @@ class TinderApp(QApplication):
             if updateWidgets:
                 self.window.features_panel.update_recommendations_widgets()
 
-
+    def get_messages(self, match_data, finished_callback=None, person_name=""):
+        self.app.get_api_data(True, self.app.tinder_api.get_messages,
+                              [], {'match_data': match_data, 'count': 100, 'page_token': None},
+                              finished_callback=finished_callback,
+                              info="Getting messages " + person_name,
+                              tag="MessagesDownloader")
     def get_match_info(self, id, name):
         self.get_api_data(True, self.tinder_api.get_person, [id], finished_callback=self.person_data_received,
                           info="Getting data of " +str(name + "_"+ str(id)))
@@ -247,13 +278,21 @@ class TinderApp(QApplication):
         self.window.json_view.load_data(data["data"])
         log.d("PERSON_DATA", +str(data))
 
-    def new_data_callback(self, data, callback, async_data=None, time_started=None, tag=None):
+    def new_data_callback(self, data, callback, callback_args, callback_kwargs, async_data=None, time_started=None, tag=None):
         if async_data is not None:
             self.completeBackgroundTask(async_data + ": completed! ", tag=tag)
         if time_started is not None:
             print(async_data + " execution time: " + str(time.time() - time_started) + "s")
         if callback is not None:
-            callback(data)
+            print("Callback, args: " +str(callback_args) + ". kwwargs: " +str(callback_kwargs))
+            if callback_args is not None and callback_kwargs is not None:
+                callback(data, callback_args, callback_kwargs)
+            elif callback_args is not None:
+                callback(data, callback_args)
+            elif callback_kwargs is not None:
+                callback(data, callback_kwargs)
+            else:
+                callback(data)
 
     def updateStyle(self):
         log.i("APP", "Update style!")
@@ -305,7 +344,7 @@ class TinderApp(QApplication):
             self.update_status_bar()
             self.read_recommendations(doAsync)
             self.read_matches(doAsync)
-            # self.read_profile(doAsync) #it should be None at the beginning, triggering the get_self_data
+            self.get_profile(doAsync, force_update=False) #it should be None at the beginning, triggering the get_self_data
         else:
             self.window = lw.LoginWindow(self, parsed_args)
             self.window.show()

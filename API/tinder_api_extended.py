@@ -44,28 +44,22 @@ class TinderApi():
         return person, type
 
     def download_people_data_api(self, data_list, folder_path, photos, insta, messages, rename_images, amount, force_overwrite=False, log_to_widget=True, thread_update_signal=None):
-        downloaded_data = None
+        downloaded_data = []
         if not isinstance(data_list, list):
             data_list = [data_list]
         total = len(data_list)
-        total_skipped = 0
         if amount > 0:
             total = min(total, amount)
         for i in range(total):
             if thread_update_signal is not None:
-                thread_update_signal.emit("Downloading " +str(folder_path) +": " +str(i+1) + "/" + str(total) + " Skipped: " +str(total_skipped))
+                thread_update_signal.emit("Downloading " +str(folder_path) +": " +str(i+1) + "/" + str(total))
             log.i("API", "Downloading " + str(i + 1) + "/" + str(total), log_to_widget)
-            updated_data = self.download_person_data(folder_path, data_list[i], photos, insta, messages, rename_images, force_overwrite, log_to_widget, thread_update_signal)
-            if updated_data is None:
-                total_skipped += 1
-            else:
-                if downloaded_data is None:
-                    downloaded_data = []
-                downloaded_data.append(updated_data)
-            log.i("API", "Data Downloaded!  Total Skipped: " + str(total_skipped), log_to_widget)
+            updated_data = self.download_person_data(data_list[i], folder_path, photos, insta, messages, rename_images, force_overwrite, log_to_widget, thread_update_signal)
+            downloaded_data.append(updated_data)
+            log.i("API", "Data Downloaded!", log_to_widget)
         return downloaded_data
 
-    def download_person_data(self, base_folder, data, photos, insta, messages, rename_images, force_overwrite=False, log_to_widget=True, thread_update_signal=None):
+    def download_person_data(self, data, base_folder, photos, insta, messages, rename_images, force_overwrite=False, log_to_widget=True, thread_update_signal=None):
         person_data, type = self.get_person_data(data)
         id = person_data['_id']
         name = person_data['name']
@@ -87,6 +81,10 @@ class TinderApi():
 
         if messages and 'match' in type:
             data['messages'] = self.download_messages(data, log_to_widget, thread_update_signal)
+
+        data['AI_Dating_metadata'] = {}
+        data['AI_Dating_metadata']['last_updated_datetime'] = str(datetime.now().strftime("%d-%b-%Y %H:%M:%S"))
+        data['AI_Dating_metadata']['last_updated_timestamp'] = str(datetime.utcnow())
 
         self.write_data_to_file(data, path, log_to_widget, thread_update_signal)
         return data
@@ -195,6 +193,12 @@ class TinderApi():
                                 if messages and 'match' in type:
                                     data['messages'] = self.download_messages(data, log_to_widget)
                                 log.d("API", "Updating "+ type+" data file", log_to_widget)
+
+                                data['AI_Dating_metadata'] = {}
+                                data['AI_Dating_metadata']['last_updated_datetime'] = str(
+                                    datetime.now().strftime("%d-%b-%Y %H:%M:%S"))
+                                data['AI_Dating_metadata']['last_updated_timestamp'] = str(datetime.utcnow())
+
                                 self.write_data_to_file(data, data_path, log_to_widget, thread_update_signal)
                                 log.d("API", "Updated", log_to_widget)
                                 list.append(data)

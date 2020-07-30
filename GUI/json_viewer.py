@@ -58,7 +58,7 @@ class JsonViewWidget(QWidget):
             """)
         # self.person_widget.profile_pic.setMinimumSize(200,200)
         selection_layout.addWidget(self.person_widget)
-        self.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Expanding)
+        # self.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Expanding)
 
         # Tree
         self.tree_widget = QTreeWidget()

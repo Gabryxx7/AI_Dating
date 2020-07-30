@@ -5,7 +5,7 @@ from PySide2.QtGui import *
 
 class APIBackgroundWorkerSignals(QObject):
     dataUpdate = Signal(object)
-    dataReceived = Signal(object, object, object, object, object)
+    dataReceived = Signal(object, object, object, object, object, object, object)
 
 """
 Here is the trick:
@@ -29,7 +29,7 @@ def fun1(*args, **kwargs):
 
 """
 class APIBackgroundWorker(QRunnable):
-    def __init__(self, api_fun, args, kwargs, callback=None, tag="APIBackgroundWorker"):
+    def __init__(self, api_fun, args, kwargs, callback=None, callback_args=None, callback_kwargs=None, tag="APIBackgroundWorker"):
         super(APIBackgroundWorker, self).__init__()
         self.api_fun = api_fun
         # self.kwargs = kwargs
@@ -41,6 +41,8 @@ class APIBackgroundWorker(QRunnable):
         kwargs["log_to_widget"] = False
         kwargs["thread_update_signal"] = self.signals.dataUpdate
         self.kwargs = kwargs
+        self.callback_args = callback_args
+        self.callback_kwargs = callback_kwargs
 
     @Slot()
     def run(self): # A slot takes no params
@@ -48,7 +50,7 @@ class APIBackgroundWorker(QRunnable):
         # print(self.args)
         # print(self.kwargs)
         data = self.api_fun(*(self.args),**(self.kwargs))
-        self.signals.dataReceived.emit(data, self.callback, "APIBackgroundWorker", self.time_started, self.tag)
+        self.signals.dataReceived.emit(data, self.callback, self.callback_args, self.callback_kwargs, "APIBackgroundWorker", self.time_started, self.tag)
 
 class DataDownloaderSignals(QObject):
     dataDownloaded = Signal(object, object, object, object, object)

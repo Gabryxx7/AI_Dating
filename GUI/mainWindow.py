@@ -11,6 +11,7 @@ from Threading.worker_thread import ListUpdateWorker, ResultObj
 from GUI.customwaitingwidget import QtCustomWaitingSpinner
 from GUI.vline_widget import VLine
 from GUI.waitingspinnerwidget import QtWaitingSpinner
+from GUI.chat_widget import ChatWidget
 
 # Subclass QMainWindow to customise your application's main window
 class MainWindow(QMainWindow):
@@ -47,6 +48,8 @@ class MainWindow(QMainWindow):
         toolbar.addSeparator()
 
         self.json_view = JsonViewWidget(self, None)
+        self.chat_widget = ChatWidget(self, left_color="#2e7690", left_text_color="white",
+                                            right_color="#1a323d", right_text_color="white")
 
         matches_json_button = QAction("Matches JSON", self)
         recommendations_json_button = QAction("Recommendations JSON", self)
@@ -76,19 +79,19 @@ class MainWindow(QMainWindow):
         self.lists_hlayout = QHBoxLayout()
         self.lists_hlayout.setContentsMargins(0,0,0,0)
 
-        self.recommendations_list = PeopleList(self, "Recommendations", json_viewer=self.json_view)
-        self.matches_list = PeopleList(self, "Matches", json_viewer=self.json_view)
+        self.recommendations_list = PeopleList(self, "Recommendations", json_viewer=self.json_view,chat_widget=self.chat_widget)
+        self.matches_list = PeopleList(self, "Matches", json_viewer=self.json_view,chat_widget=self.chat_widget)
         self.features_panel = FeaturesButtonList(self)
 
-        self.lists_hlayout.addWidget(self.recommendations_list)
-
+        self.lists_hlayout.addWidget(self.chat_widget)
         self.main_vlayout.addLayout(self.lists_hlayout, 70)
         self.main_vlayout.addWidget(log.logWidget, 30)
 
-        self.main_hlayout.addWidget(self.matches_list, 45)
-        self.main_hlayout.addWidget(self.json_view, 15)
-        self.main_hlayout.addLayout(self.main_vlayout, 25)
-        self.main_hlayout.addWidget(self.features_panel, 15)
+        self.main_hlayout.addWidget(self.matches_list, 30)
+        # self.main_hlayout.addWidget(self.recommendations_list, 30)
+        self.main_hlayout.addWidget(self.json_view, 10)
+        self.main_hlayout.addLayout(self.main_vlayout, 20)
+        self.main_hlayout.addWidget(self.features_panel, 10)
 
         self.main_widget.setLayout(self.main_hlayout)
         self.setCentralWidget(self.main_widget)

@@ -7,7 +7,7 @@ from GUI.avatar_label import AvatarLabel
 from Threading.data_reloader import ImgLoader
 
 class PersonDetailsWidget(QWidget):
-    def __init__(self, parent, data=None, itemWidget=None, load_images=False):
+    def __init__(self, parent, data=None, load_images=False):
         super(PersonDetailsWidget, self).__init__(parent)
         self.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Expanding)
         self.layout = QHBoxLayout()
