@@ -12,9 +12,13 @@ class MessageBubble(QLabel):
         self.font_size = font_size
         self.border_radius = border_radius
         self.content_margins = border_radius*0.3
+        self.bubble_triangle_width = 20
+        self.bubble_triangle_height = 20
+        self.setSizePolicy(QSizePolicy.Preferred,
+            QSizePolicy.MinimumExpanding)
+
         if content_margins is not None:
             self.content_margins = content_margins
-        self.setContentsMargins(self.content_margins, self.content_margins, self.content_margins, self.content_margins)
         # if left:
         #     self.setAlignment(Qt.AlignVCenter | Qt.AlignLeft)
         # else:
@@ -34,7 +38,35 @@ class MessageBubble(QLabel):
             brush = QBrush(color)
             p.setBrush(brush)
             p.setPen(QPen(color, 0, Qt.SolidLine, Qt.RoundCap, Qt.RoundJoin))
-        p.drawRoundedRect(0, 0, self.width()-1, self.height()-1, self.border_radius, self.border_radius)
+        if self.left:
+            p.drawRoundedRect(self.bubble_triangle_width, 0, self.width()-self.bubble_triangle_width-1, self.height()-1, self.border_radius, self.border_radius)
+            min_height = min(self.border_radius*0.5, self.height()*0.2)
+            height = self.height()-self.bubble_triangle_height-min_height
+            width = self.bubble_triangle_width+min_height
+            points = QPolygon([
+                QPoint(1, self.height()-self.border_radius*0.1),
+                QPoint(width, self.height()-self.border_radius*0.1),
+                QPoint(width, height)
+            ])
+            self.setContentsMargins(self.content_margins + self.border_radius*0.4 + self.bubble_triangle_width,
+                                    self.content_margins + self.border_radius*0.5,
+                                    self.content_margins + self.border_radius*0.4,
+                                    self.content_margins + self.border_radius*0.5)
+        else:
+            p.drawRoundedRect(0, 0, self.width()-self.bubble_triangle_width-1, self.height()-1, self.border_radius, self.border_radius)
+            min_height = min(self.border_radius*0.5, self.height()*0.2)
+            height = self.height()-self.bubble_triangle_height-min_height
+            width = self.width()-self.bubble_triangle_width-min_height
+            points = QPolygon([
+                QPoint(self.width()-1, self.height()-self.border_radius*0.1),
+                QPoint(width, self.height()-self.border_radius*0.1),
+                QPoint(width, height)
+            ])
+            self.setContentsMargins(self.content_margins + self.border_radius*0.4,
+                                    self.content_margins + self.border_radius*0.5,
+                                    self.content_margins + self.border_radius*0.4 + self.bubble_triangle_width,
+                                    self.content_margins + self.border_radius*0.5)
+        p.drawPolygon(points)
         super(MessageBubble, self).paintEvent(e)
 
     def updateBubble(self, color=None, text_color=None, font_size=None, border_radius=None, content_margins=None):
@@ -49,7 +81,6 @@ class MessageBubble(QLabel):
         self.content_margins = border_radius * 0.3
         if content_margins is not None:
             self.content_margins = content_margins
-        self.setContentsMargins(self.content_margins, self.content_margins, self.content_margins, self.content_margins)
         newfont = QFont("Times", self.font_size)
         self.setFont(newfont)
         self.repaint()
@@ -122,6 +153,7 @@ class ChatWidget(QWidget):
         self.chat_layout = QVBoxLayout()
         self.chat_widget.setLayout(self.chat_layout)
         self.scroll_area.setWidget(self.chat_widget)
+        self.chat_layout.setAlignment(Qt.AlignTop)
 
         if self.bg_color:
             self.chat_widget.setStyleSheet("background-color: %s;" % (self.bg_color))
@@ -166,6 +198,7 @@ class ChatWidget(QWidget):
         # else:
         #     log.d("CHAT", "Adding right " + str(color) +" Message: " +text)
         self.chat_layout.addWidget(MessageWidget(text=text, left=left, color=color, text_color=text_color, font_size=font_size, border_radius=border_radius))
+        # self.chat_layout.addStretch(1)
         self.scroll_area.verticalScrollBar().setValue(self.scroll_area.verticalScrollBar().maximum())
 
     def addMessages(self, messages_list, clear_messages=True,
