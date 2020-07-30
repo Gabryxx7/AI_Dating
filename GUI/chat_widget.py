@@ -1,118 +1,8 @@
 from PySide2.QtWidgets import *
 from PySide2.QtCore import *
 from PySide2.QtGui import *
-from GUI.log import log
+from GUI.message_bubble import MessageWidget
 
-class MessageBubble(QLabel):
-    def __init__(self, text, left=False, color=None, text_color=None, font_size=10, border_radius=10, content_margins=None):
-        super(MessageBubble,self).__init__(text)
-        self.left = left
-        self.color = color
-        self.text_color = text_color
-        self.font_size = font_size
-        self.border_radius = border_radius
-        self.content_margins = border_radius*0.3
-        self.bubble_triangle_width = 20
-        self.bubble_triangle_height = 20
-        self.setSizePolicy(QSizePolicy.Preferred,
-            QSizePolicy.MinimumExpanding)
-
-        if content_margins is not None:
-            self.content_margins = content_margins
-        # if left:
-        #     self.setAlignment(Qt.AlignVCenter | Qt.AlignLeft)
-        # else:
-        #     self.setAlignment(Qt.AlignVCenter | Qt.AlignRight)
-        self.setAlignment(Qt.AlignVCenter | Qt.AlignLeft)
-        self.setWordWrap(True)
-        newfont = QFont("Times", self.font_size)
-        self.setFont(newfont)
-        self.setStyleSheet("color: %s;" % (self.text_color))
-
-    def paintEvent(self, e):
-        p = QPainter(self)
-        p.setRenderHint(QPainter.Antialiasing,True)
-        p.setBackground(Qt.transparent)
-        if self.color is not None:
-            color = QColor(self.color)
-            brush = QBrush(color)
-            p.setBrush(brush)
-            p.setPen(QPen(color, 0, Qt.SolidLine, Qt.RoundCap, Qt.RoundJoin))
-        if self.left:
-            p.drawRoundedRect(self.bubble_triangle_width, 0, self.width()-self.bubble_triangle_width-1, self.height()-1, self.border_radius, self.border_radius)
-            min_height = min(self.border_radius*0.5, self.height()*0.2)
-            height = self.height()-self.bubble_triangle_height-min_height
-            width = self.bubble_triangle_width+min_height
-            points = QPolygon([
-                QPoint(1, self.height()-self.border_radius*0.1),
-                QPoint(width, self.height()-self.border_radius*0.1),
-                QPoint(width, height)
-            ])
-            self.setContentsMargins(self.content_margins + self.border_radius*0.4 + self.bubble_triangle_width,
-                                    self.content_margins + self.border_radius*0.5,
-                                    self.content_margins + self.border_radius*0.4,
-                                    self.content_margins + self.border_radius*0.5)
-        else:
-            p.drawRoundedRect(0, 0, self.width()-self.bubble_triangle_width-1, self.height()-1, self.border_radius, self.border_radius)
-            min_height = min(self.border_radius*0.5, self.height()*0.2)
-            height = self.height()-self.bubble_triangle_height-min_height
-            width = self.width()-self.bubble_triangle_width-min_height
-            points = QPolygon([
-                QPoint(self.width()-1, self.height()-self.border_radius*0.1),
-                QPoint(width, self.height()-self.border_radius*0.1),
-                QPoint(width, height)
-            ])
-            self.setContentsMargins(self.content_margins + self.border_radius*0.4,
-                                    self.content_margins + self.border_radius*0.5,
-                                    self.content_margins + self.border_radius*0.4 + self.bubble_triangle_width,
-                                    self.content_margins + self.border_radius*0.5)
-        p.drawPolygon(points)
-        super(MessageBubble, self).paintEvent(e)
-
-    def updateBubble(self, color=None, text_color=None, font_size=None, border_radius=None, content_margins=None):
-        if color:
-            self.color = color
-        if text_color:
-            self.text_color = text_color
-        if border_radius:
-            self.border_radius = border_radius
-        if font_size:
-            self.font_size = font_size
-        self.content_margins = border_radius * 0.3
-        if content_margins is not None:
-            self.content_margins = content_margins
-        newfont = QFont("Times", self.font_size)
-        self.setFont(newfont)
-        self.repaint()
-
-class MessageWidget(QWidget):
-    def __init__(self,text, left=True, color=None, text_color=None, font_size=10, border_radius=10):
-        super(MessageWidget,self).__init__()
-
-        self.setContentsMargins(0,0,0,0)
-        self.left = left
-        self.color = color
-        self.text_color = text_color
-        self.font_size = font_size
-        self.border_radius = border_radius
-
-        hbox = QHBoxLayout()
-        self.bubble = MessageBubble(text, left, color=self.color, text_color=self.text_color, font_size=self.font_size, border_radius=self.border_radius)
-        self.setStyleSheet("background-color: transparent;")
-
-        if not self.left:
-            hbox.addSpacerItem(QSpacerItem(1,1,QSizePolicy.Expanding,QSizePolicy.Expanding))
-        hbox.addWidget(self.bubble)
-        if self.left:
-            hbox.addSpacerItem(QSpacerItem(1,1,QSizePolicy.Expanding,QSizePolicy.Expanding))
-
-        hbox.setContentsMargins(0,0,0,0)
-        self.setLayout(hbox)
-
-    def updateBubble(self, left=None, color=None, text_color=None, font_size=None, border_radius=None, content_margins=None):
-        if left:
-            self.left = left
-        self.bubble.updateBubble(color, text_color, font_size, border_radius, content_margins)
 
 class ChatWidget(QWidget):
     def __init__(self, parent, messages_list=None,
@@ -147,13 +37,13 @@ class ChatWidget(QWidget):
         self.scroll_area.setHorizontalScrollBarPolicy(Qt.ScrollBarAlwaysOff)
         self.scroll_area.setWidgetResizable(True)
 
-        self.main_layout.addWidget(self.scroll_area)
-
         self.chat_widget = QWidget()
         self.chat_layout = QVBoxLayout()
+        self.chat_layout.addStretch(1)
+        self.chat_layout.setAlignment(Qt.AlignTop)
         self.chat_widget.setLayout(self.chat_layout)
         self.scroll_area.setWidget(self.chat_widget)
-        self.chat_layout.setAlignment(Qt.AlignTop)
+        self.main_layout.addWidget(self.scroll_area)
 
         if self.bg_color:
             self.chat_widget.setStyleSheet("background-color: %s;" % (self.bg_color))
@@ -168,16 +58,17 @@ class ChatWidget(QWidget):
         self.config_file = self.parent.app.config_file
         self.statusBar = self.parent.statusBar
 
-
         # self.addMessages(messages_list)
 
     def clearMessages(self):
         for i in reversed(range(self.chat_layout.count())):
             widgetToRemove = self.chat_layout.itemAt(i).widget()
-            # remove it from the layout list
-            self.chat_layout.removeWidget(widgetToRemove)
-            # remove it from the gui
-            widgetToRemove.setParent(None)
+            if isinstance(widgetToRemove, MessageWidget):
+                # remove it from the layout list
+                self.chat_layout.removeWidget(widgetToRemove)
+                # remove it from the gui
+                widgetToRemove.setParent(None)
+            # else it might be the addStretch and we don't want to remove it
 
     def setLeftId(self, id):
         self.left_id = id
@@ -193,13 +84,12 @@ class ChatWidget(QWidget):
         self.right_text_color = color
 
     def addMessage(self, text, left=False, color=None, text_color=None, font_size=None, border_radius=None):
-        # if left:
-        #     log.d("CHAT", "Adding left " + str(color) +" Message: " +text)
-        # else:
-        #     log.d("CHAT", "Adding right " + str(color) +" Message: " +text)
-        self.chat_layout.addWidget(MessageWidget(text=text, left=left, color=color, text_color=text_color, font_size=font_size, border_radius=border_radius))
-        # self.chat_layout.addStretch(1)
-        self.scroll_area.verticalScrollBar().setValue(self.scroll_area.verticalScrollBar().maximum())
+        is_first = True
+        lastMessageWidget = self.chat_layout.itemAt(self.chat_layout.count()-1).widget()
+        if isinstance(lastMessageWidget, MessageWidget):
+            is_first =  (left != lastMessageWidget.left)
+        self.chat_layout.addWidget(MessageWidget(text=text, left=left, color=color, text_color=text_color,
+                                                 font_size=font_size, border_radius=border_radius, draw_triangle=is_first))
 
     def addMessages(self, messages_list, clear_messages=True,
                     new_left_id=None, new_left_color=None, new_left_text_color=None,
@@ -248,6 +138,7 @@ class ChatWidget(QWidget):
                         self.addMessage(message['message'], left=True, color=left_color, text_color=left_text_color, font_size=font_size, border_radius=border_radius)
                     else:
                         self.addMessage(message['message'], left=False, color=right_color, text_color=right_text_color, font_size=font_size, border_radius=border_radius)
+        self.scroll_area.verticalScrollBar().setValue(self.scroll_area.verticalScrollBar().maximum())
 
     def get_other_id(self, left_id, right_id, to_id, from_id):
         # So the first person to send a message will be the one on the left
