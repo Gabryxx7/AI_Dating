@@ -1,7 +1,7 @@
 from PySide2.QtWidgets import *
 from PySide2.QtCore import *
 from PySide2.QtGui import *
-from GUI.message_bubble import MessageWidget, Side
+from GUI.message_bubble import MessageWidget, default_theme, Side
 from datetime import datetime
 import dateutil.parser
 import os
@@ -10,44 +10,47 @@ import oyaml as yaml
 
 class ChatWidget(QWidget):
     def __init__(self, parent, messages_list=None, theme=None,
-                 left_id=None, left_color=None, left_text_color=None,
-                 right_id=None, right_color=None,  right_text_color=None,
-                 bg_color=None, font_size=10, border_radius=10, draw_bubble_triangle=True,
+                 left_id=None, right_id=None,
                  chat_box_enabled=True, controls_enabled=True):
         super(ChatWidget, self).__init__(parent)
-        theme_data = None
+        self.theme_data = {}
         print("Theme data1 is" +str(theme))
         if isinstance(theme, str):
             try:
                 with open(theme, "r") as tf:
-                    theme_data = yaml.safe_load(tf)
-                    print("Theme data is" +str(theme_data))
+                    self.theme_data = yaml.safe_load(tf)
+                    print("Theme data is" +str(self.theme_data))
             except Exception as e:
                 print("Exception reading theme file: " +str(e))
                 pass
         elif isinstance(theme, dict):
-            theme_data = theme
-        if theme_data:
-            self.left_color = theme_data['left_color']
-            self.left_text_color = theme_data['left_text_color']
-            self.right_color = theme_data['right_color']
-            self.right_text_color = theme_data['right_text_color']
-            self.font_size = theme_data['font_size']
-            self.border_radius = theme_data['border_radius']
-            self.bg_color = theme_data['bg_color']
-            self.draw_bubble_triangle = theme_data['draw_bubble_triangle']
+            self.theme_data = theme
+        if self.theme_data is None:
+            self.theme_data = default_theme
         else:
-            self.left_color = left_color
-            self.left_text_color = left_text_color
-            self.right_color = right_color
-            self.right_text_color = right_text_color
-            self.font_size = font_size
-            self.border_radius = border_radius
-            self.bg_color = bg_color
-            self.draw_bubble_triangle = draw_bubble_triangle
+            for key in default_theme.keys():
+                if key not in self.theme_data:
+                    self.theme_data[key] = default_theme[key]
+
+        self.left_color = self.theme_data['left_color']
+        self.left_text_color = self.theme_data['left_text_color']
+        self.right_color = self.theme_data['right_color']
+        self.right_text_color = self.theme_data['right_text_color']
+        self.sent_date_font_size = self.theme_data['sent_date_font_size']
+        self.sent_date_text_color = self.theme_data['sent_date_text_color']
+        self.font_size = self.theme_data['font_size']
+        self.day_color = self.theme_data['day_color']
+        self.day_text_color = self.theme_data['day_text_color']
+        self.day_font_size = self.theme_data['day_font_size']
+        self.border_radius = self.theme_data['border_radius']
+        self.bg_color = self.theme_data['bg_color']
+        self.draw_bubble_triangle = self.theme_data['draw_bubble_triangle']
+        self.bubble_triangle_pos = self.theme_data['bubble_triangle_pos']
 
         self.left_id = left_id
         self.right_id = right_id
+
+        self.showing_date = None
 
         self.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Expanding)
         self.main_layout = QVBoxLayout()
@@ -107,77 +110,122 @@ class ChatWidget(QWidget):
     def setrightTextColor(self, color):
         self.right_text_color = color
 
-    def addBubble(self, message, side=Side.left, color=None, text_color=None, font_size=None, border_radius=None, draw_triangle=True):
-        self.chat_layout.addWidget(MessageWidget(message=message, side=side, color=color, text_color=text_color,
-                                                 font_size=font_size, border_radius=border_radius, draw_triangle=draw_triangle))
+    def addBubble(self, message=None, side=Side.left,
+                    left_color=None, left_text_color=None,
+                    right_color=None, right_text_color=None,
+                    sent_date_font_size=None, sent_date_text_color=None,
+                    day_color=None, day_text_color=None, day_font_size=None,
+                    bg_color=None, font_size=None,
+                    border_radius=None,
+                    draw_bubble_triangle=None, bubble_triangle_pos=None):
 
-    def addMessages(self, messages_list, clear_messages=True,
-                    new_left_id=None, new_left_color=None, new_left_text_color=None,
-                    new_right_id=None, new_right_color=None, new_right_text_color=None,
-                    new_font_size=None, new_border_radius=None):
-        right_id = None
-        left_id = None
+        # Precedence: new_value > self.value
+        left_color = self.get_final_value(left_color, self.left_color)
+        left_text_color = self.get_final_value(left_text_color, self.left_text_color)
+        right_color = self.get_final_value(right_color, self.right_color)
+        right_text_color = self.get_final_value(right_text_color, self.right_text_color)
+        sent_date_font_size = self.get_final_value(sent_date_font_size, self.sent_date_font_size)
+        sent_date_text_color = self.get_final_value(sent_date_text_color, self.sent_date_text_color)
+        day_color = self.get_final_value(day_color, self.day_color)
+        day_text_color = self.get_final_value(day_text_color, self.day_text_color)
+        day_font_size = self.get_final_value(day_font_size, self.day_font_size)
+        bg_color = self.get_final_value(bg_color, self.bg_color)
+        draw_bubble_triangle = self.get_final_value(draw_bubble_triangle, self.draw_bubble_triangle)
+        bubble_triangle_pos = self.get_final_value(bubble_triangle_pos, self.bubble_triangle_pos)
+        font_size = self.get_final_value(font_size, self.font_size)
+        border_radius = self.get_final_value(border_radius, self.border_radius)
+
+        if side == Side.left:
+            color = left_color
+            text_color = left_text_color
+        elif side == Side.right:
+            color = right_color
+            text_color = right_text_color
+        else:
+            color = day_color
+            text_color = day_text_color
+
+        message_widget = MessageWidget(message=message, side=side,
+                 color=color, text_color=text_color, font_size=font_size,
+                 sent_date_font_size=sent_date_font_size, sent_date_text_color=sent_date_text_color,
+                 border_radius=border_radius,
+                 draw_bubble_triangle=draw_bubble_triangle, bubble_triangle_pos=bubble_triangle_pos)
+        # if side == Side.center:
+        #     message_widget.signal_shown.connect(self.message_visible)
+        self.chat_layout.addWidget(message_widget)
+
+    def wheelEvent(self, event):
+        for widget in self.children()[1:]:
+            if not widget.visibleRegion().isEmpty():
+                if isinstance(widget, MessageWidget):
+                    print("Showing " + str(widget.bubble.message))
+                    if widget.side == Side.center:
+                        if self.showing_date is None or widget.bubble.message != self.showing_date.bubble.message:
+                            self.showing_date = MessageWidget.fromMessageBubble(widget.bubble)
+                    self.chat_layout.addWidget(self.showing_date)
+        event.ignore()
+
+    def addMessages(self, messages_list, clear_messages=True, left_id=None, right_id=None,
+                    left_color=None, left_text_color=None,
+                    right_color=None, right_text_color=None,
+                    sent_date_font_size=None, sent_date_text_color=None,
+                    day_color=None, day_text_color=None, day_font_size=None,
+                    bg_color=None, font_size=None,
+                    border_radius=None,
+                    draw_bubble_triangle=None, bubble_triangle_pos=None):
         if clear_messages:
             self.clearMessages()
         if messages_list is not None:
             date=None
             side=None
-            color=None
-            text_color=None
-            for message in reversed(messages_list):
+            bubble_triangle_pos = self.get_final_value(bubble_triangle_pos, self.bubble_triangle_pos)
+            for i in reversed(range(len(messages_list))):
+                message = messages_list[i]
                 if isinstance(message, dict):
                     # If we haven't set the ids yet (only for the first message)
                     # order of ids: new_id -> self.id -> message_to/from
                     if right_id is None and left_id is None:
-                        # log.d("CHAT2", "new_left_id " + str(new_left_id) + "\tself.left_id " + str(self.left_id))
-                        # log.d("CHAT2", "new_right_id " + str(new_right_id) + "\tself.right_id " + str(self.right_id))
-                        # log.d("CHAT2", "new_left_color " + str(new_left_color) + "\tself.left_color " + str(self.left_color))
-                        # log.d("CHAT2", "new_right_color " + str(new_right_color) + "\tself.right_color " + str(self.right_color))
-                        # log.d("CHAT2", "new_left_text_color " + str(new_left_text_color) + "\tself.left_text_color " + str(self.left_text_color))
-                        # log.d("CHAT2", "new_right_text_color " + str(new_right_text_color) + "\tself.right_text_color " + str(self.right_text_color))
-                        right_id = self.get_final_value(new_right_id, self.right_id)
-                        left_id = self.get_final_value(new_left_id, self.left_id)
+                        right_id = self.get_final_value(right_id, self.right_id)
+                        left_id = self.get_final_value(left_id, self.left_id)
                         # if one of the two is still None then we have to decide the other id
                         right_id, left_id = self.get_other_id(right_id, left_id, message['to'], message['from'])
 
-                        right_color = self.get_final_value(new_right_color, self.right_color)
-                        left_color = self.get_final_value(new_left_color, self.left_color)
-                        right_text_color = self.get_final_value(new_right_text_color, self.right_text_color)
-                        left_text_color = self.get_final_value(new_left_text_color, self.left_text_color)
-                        font_size = self.get_final_value(new_font_size, self.font_size)
-                        border_radius = self.get_final_value(new_border_radius, self.border_radius)
-
-                        # log.d("CHAT", "")
-                        # log.d("CHAT2", "left_id " + str(left_id))
-                        # log.d("CHAT2", "right_id " + str(right_id))
-                        # log.d("CHAT2", "left_color " + str(left_color))
-                        # log.d("CHAT2", "right_color " + str(right_color))
-                        # log.d("CHAT2", "left_text_color " + str(left_text_color))
-                        # log.d("CHAT2", "right_text_color " + str(right_text_color))
-                    if date is None:
-                        date = dateutil.parser.isoparse(message['sent_date'])
-                        self.addBubble(date.strftime("%m-%d-%Y"), side=Side.center,
-                                        color=left_color, text_color="#BCBCBC", font_size=font_size*0.85,
-                                       border_radius=border_radius*0.8, draw_triangle=False)
-                    else:
-                        new_date = dateutil.parser.isoparse(message['sent_date'])
-                        if date.day < new_date.day:
-                            self.addBubble(new_date.strftime("%m-%d-%Y"), side=Side.center,
-                                           color=left_color, text_color="#BCBCBC", font_size=font_size*0.85,
-                                           border_radius=border_radius, draw_triangle=False)
+                    new_date = dateutil.parser.isoparse(message['sent_date'])
+                    if date is None or date.date() < new_date.date():
                         date = new_date
+                        self.addBubble(date.strftime("%d %B %Y"), Side.center,
+                                       left_color, left_text_color,
+                                       right_color, right_text_color,
+                                       sent_date_font_size, sent_date_text_color,
+                                       day_color, day_text_color, day_font_size,
+                                       bg_color, font_size,
+                                       border_radius,
+                                       draw_bubble_triangle, bubble_triangle_pos)
+
                     new_side = Side.right
-                    color=right_color
-                    text_color=right_text_color
                     if str(message['from']) in right_id:
                         new_side = Side.left
-                        color=left_color
-                        text_color=left_text_color
-                    draw_triangle=False
-                    if new_side != side:
-                        draw_triangle=True
+
+                    if bubble_triangle_pos == Side.top:
+                        new_draw_bubble_triangle = (new_side != side) and draw_bubble_triangle
+                    else:
+                        new_draw_bubble_triangle = draw_bubble_triangle # If it's the last message and at the bottom, draw the triangle
+                        if i+1 <= len(messages_list)-1:
+                            next_side = Side.right
+                            if str(messages_list[i+1]['from']) in right_id:
+                                next_side = Side.left
+                            new_draw_bubble_triangle = (next_side != new_side) and draw_bubble_triangle
                     side = new_side
-                    self.addBubble(message, side=side, color=color, text_color=text_color, font_size=font_size, border_radius=border_radius, draw_triangle=draw_triangle)
+
+                    self.addBubble(message, side,
+                                   left_color, left_text_color,
+                                   right_color, right_text_color,
+                                   sent_date_font_size, sent_date_text_color,
+                                   day_color, day_text_color, day_font_size,
+                                   bg_color, font_size,
+                                   border_radius,
+                                   new_draw_bubble_triangle, bubble_triangle_pos)
+
             self.scroll_area.verticalScrollBar().setValue(self.scroll_area.verticalScrollBar().maximum())
 
     def get_other_id(self, left_id, right_id, to_id, from_id):
@@ -194,14 +242,12 @@ class ChatWidget(QWidget):
                 left_id = to_id
         return left_id, right_id
 
-    def get_final_value(self, first_value, second_value):
-        final_value = first_value
-        if final_value is None:
-            final_value = second_value
-        return final_value
+    def get_final_value(self, overriding_value, original_value):
+        if overriding_value is None:
+            return original_value
+        return overriding_value
     
     def setControls(self):
-
         self.radius_slider_label = QLabel("Radius")
         self.radius_slider = QSlider(Qt.Horizontal)
         self.radius_slider.setRange(0, 100)
@@ -296,8 +342,8 @@ class ChatWidget(QWidget):
             self.update_chat()
 
     def update_chat(self):
-        self.font_size = int(self.font_size_slider.value())
-        self.font_size_slider_label.setText("Size " + str(self.font_size) +"pt")
+        self.font_size = str(self.font_size_slider.value())+"pt"
+        self.font_size_slider_label.setText("Size " + str(self.font_size_slider.value()) +"pt")
         self.border_radius = int(self.radius_slider.value())
         self.radius_slider_label.setText("Radius " + str(self.border_radius) +"px")
         self.content_margins = int(self.content_margins_slider.value())
@@ -329,5 +375,5 @@ class ChatWidget(QWidget):
     def send_message(self):
         text = self.chat_box.toPlainText()
         print("Sending: " +text)
-        self.addBubble(text, side=Side.left, color=self.left_color, text_color=self.left_text_color, font_size=self.font_size, border_radius=self.border_radius)
+        self.addBubble(text, side=Side.left)
         self.chat_box.setText("")

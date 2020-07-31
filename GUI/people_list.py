@@ -99,7 +99,7 @@ class PeopleList(QWidget):
                     self.list.setItemWidget(itemN, person_widget)
                     # self.list_layout.addWidget(person_widget) # If I was using a QScrollArea
                     if person_widget.photos is not None:
-                        photos_path_list.append(person_widget.photos[0])
+                        photos_path_list.append(person_widget.processed_photos[0])
                 except Exception as e:
                     print("WUT " +str(e))
             self.photos_path_list = photos_path_list
