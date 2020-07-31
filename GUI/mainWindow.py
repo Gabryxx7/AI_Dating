@@ -48,8 +48,9 @@ class MainWindow(QMainWindow):
         toolbar.addSeparator()
 
         self.json_view = JsonViewWidget(self, None)
-        self.chat_widget = ChatWidget(self, left_color="#2e7690", left_text_color="white",
-                                            right_color="#1a323d", right_text_color="white")
+        # self.chat_widget = ChatWidget(self, left_color="#2e7690", left_text_color="white",
+        #                                     right_color="#1a323d", right_text_color="white")
+        self.chat_widget = ChatWidget(self, theme=self.app.data_folder+"/themes/tinder_theme.yaml")
 
         matches_json_button = QAction("Matches JSON", self)
         recommendations_json_button = QAction("Recommendations JSON", self)

@@ -93,8 +93,8 @@ class MessageBubble(QWidget):
             brush = QBrush(color)
             p.setBrush(brush)
             p.setPen(QPen(color, 0, Qt.SolidLine, Qt.RoundCap, Qt.RoundJoin))
-            min_height = min(self.border_radius*0.6, self.height()*0.25) # This is how wide the side attached to the bubble should be
-            min_width = min(self.border_radius, self.width()*0.5) # This is how long the side from the edge to teh bubble should be
+        min_height = min(self.border_radius*0.6, self.height()*0.25) # This is how wide the side attached to the bubble should be
+        min_width = min(self.border_radius, self.width()*0.5) # This is how long the side from the edge to teh bubble should be
         if self.side == Side.left or self.side == Side.center:
             p.drawRoundedRect(self.bubble_triangle_width, 0, self.width()-self.bubble_triangle_width-1, self.height()-1, self.border_radius, self.border_radius)
             width = 0+self.bubble_triangle_width+min_width

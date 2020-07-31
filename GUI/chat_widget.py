@@ -4,26 +4,50 @@ from PySide2.QtGui import *
 from GUI.message_bubble import MessageWidget, Side
 from datetime import datetime
 import dateutil.parser
+import os
+import oyaml as yaml
 
 
 class ChatWidget(QWidget):
-    def __init__(self, parent, messages_list=None,
+    def __init__(self, parent, messages_list=None, theme=None,
                  left_id=None, left_color=None, left_text_color=None,
                  right_id=None, right_color=None,  right_text_color=None,
-                 bg_color=None, font_size=10, border_radius=10,
-                 chat_box_enabled=True,
-                 controls_enabled=True):
+                 bg_color=None, font_size=10, border_radius=10, draw_bubble_triangle=True,
+                 chat_box_enabled=True, controls_enabled=True):
         super(ChatWidget, self).__init__(parent)
+        theme_data = None
+        print("Theme data1 is" +str(theme))
+        if isinstance(theme, str):
+            try:
+                with open(theme, "r") as tf:
+                    theme_data = yaml.safe_load(tf)
+                    print("Theme data is" +str(theme_data))
+            except Exception as e:
+                print("Exception reading theme file: " +str(e))
+                pass
+        elif isinstance(theme, dict):
+            theme_data = theme
+        if theme_data:
+            self.left_color = theme_data['left_color']
+            self.left_text_color = theme_data['left_text_color']
+            self.right_color = theme_data['right_color']
+            self.right_text_color = theme_data['right_text_color']
+            self.font_size = theme_data['font_size']
+            self.border_radius = theme_data['border_radius']
+            self.bg_color = theme_data['bg_color']
+            self.draw_bubble_triangle = theme_data['draw_bubble_triangle']
+        else:
+            self.left_color = left_color
+            self.left_text_color = left_text_color
+            self.right_color = right_color
+            self.right_text_color = right_text_color
+            self.font_size = font_size
+            self.border_radius = border_radius
+            self.bg_color = bg_color
+            self.draw_bubble_triangle = draw_bubble_triangle
 
         self.left_id = left_id
-        self.left_color = left_color
-        self.left_text_color = left_text_color
         self.right_id = right_id
-        self.right_color = right_color
-        self.right_text_color = right_text_color
-        self.font_size = font_size
-        self.border_radius = border_radius
-        self.bg_color = bg_color
 
         self.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Expanding)
         self.main_layout = QVBoxLayout()
