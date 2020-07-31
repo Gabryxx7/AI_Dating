@@ -1,6 +1,7 @@
 from PySide2.QtWidgets import *
 from PySide2.QtCore import *
 from PySide2.QtGui import *
+import dateutil.parser
 
 from GUI.rounded_poly import RoundedPolygon
 
@@ -9,55 +10,79 @@ class Side:
     right = "right"
     center = "center"
 
-class MessageWidget(QWidget):
-    def __init__(self,text, side=Side.left, color=None, text_color=None, font_size=10, border_radius=10, draw_triangle=True):
-        super(MessageWidget,self).__init__()
 
+"""
+The message widget is a wrapper made of an hbox that adds a stretch to either left or right (or both) to position the bubble
+"""
+class MessageWidget(QWidget):
+    def __init__(self, *args, **kwargs):
+        super(MessageWidget,self).__init__()
         self.setContentsMargins(0,0,0,0)
-        self.side = side
-        self.color = color
-        self.text_color = text_color
-        self.font_size = font_size
-        self.border_radius = border_radius
-        self.draw_triangle = draw_triangle
+        self.side = kwargs['side']
+
+        self.bubble = MessageBubble(*args, **kwargs)
 
         hbox = QHBoxLayout()
-        self.bubble = MessageBubble(text, side, color=self.color, text_color=self.text_color,
-                                    font_size=self.font_size, border_radius=self.border_radius, draw_triangle=self.draw_triangle)
-        self.setStyleSheet("background-color: transparent;")
-
+        hbox.setContentsMargins(0,0,0,0)
         if self.side == Side.right or self.side == Side.center:
-            hbox.addSpacerItem(QSpacerItem(1,1,QSizePolicy.Expanding,QSizePolicy.Expanding))
+            hbox.addSpacerItem(QSpacerItem(1, 1, QSizePolicy.Expanding, QSizePolicy.Expanding))
         hbox.addWidget(self.bubble)
         if self.side == Side.left or self.side == Side.center:
-            hbox.addSpacerItem(QSpacerItem(1,1,QSizePolicy.Expanding,QSizePolicy.Expanding))
+            hbox.addSpacerItem(QSpacerItem(1, 1, QSizePolicy.Expanding, QSizePolicy.Expanding))
+        self.setStyleSheet("background-color: transparent;")
 
-        hbox.setContentsMargins(0,0,0,0)
         self.setLayout(hbox)
 
-    def updateBubble(self, side=None, color=None, text_color=None, font_size=None, border_radius=None, content_margins=None):
-        self.bubble.updateBubble(color, text_color, font_size, border_radius, content_margins)
+    def updateBubble(self, *args, **kwargs):
+        self.bubble.updateBubble(*args, **kwargs)
 
-class MessageBubble(QLabel):
-    def __init__(self, text, side=Side.left, color=None, text_color=None, font_size=10, border_radius=10, draw_triangle=True, triangle_pos=1):
-        super(MessageBubble,self).__init__(text)
+"""
+The bubble is the atualy widget which can hae multiple labels and stuff inside it but it's all painted with a bubble background
+And the margins are set so that the content is never outside the bubble
+"""
+class MessageBubble(QWidget):
+    def __init__(self, message=None, side=Side.left, color=None, text_color=None, font_size=10, border_radius=10, draw_triangle=True, triangle_pos=1):
+        super(MessageBubble, self).__init__()
+
         self.side = side
         self.color = color
         self.text_color = text_color
         self.font_size = font_size
         self.border_radius = border_radius
-        self.content_margins = border_radius*0.3
+        self.content_margins = border_radius * 0.3
         self.draw_triangle = draw_triangle
-        self.triangle_pos = triangle_pos # 0 Bottom, 1 Top
+        self.triangle_pos = triangle_pos  # 0 Bottom, 1 Top
         self.bubble_triangle_width = 20
         self.bubble_triangle_height = 20
+        self.message = message
+        if isinstance(message, dict):
+            self.text = message['message']
+            self.sent_date = dateutil.parser.isoparse(self.message['sent_date'])
+        else:
+            self.text = message
+            self.sent_date = None
 
-        self.setSizePolicy(QSizePolicy.Preferred, QSizePolicy.MinimumExpanding)
-        self.setAlignment(Qt.AlignVCenter | Qt.AlignLeft)
-        self.setWordWrap(True)
-        newfont = QFont("Times", self.font_size)
-        self.setFont(newfont)
-        self.setStyleSheet("color: %s;" % (self.text_color))
+        self.text_label = QLabel(self.text)
+        self.text_label.setContentsMargins(0,0,0,0)
+        self.text_label.setSizePolicy(QSizePolicy.Preferred, QSizePolicy.MinimumExpanding)
+        self.text_label.setAlignment(Qt.AlignVCenter | Qt.AlignLeft)
+        self.text_label.setWordWrap(True)
+
+        self.layout = QVBoxLayout()
+        self.layout.setContentsMargins(0,0,0,0)
+        self.layout.addWidget(self.text_label)
+
+        if self.sent_date:
+            self.date_label = QLabel(self.sent_date.strftime("%H:%M"))
+            newfont = QFont("Times", self.font_size*0.6)
+            self.date_label.setFont(newfont)
+            self.date_label.setStyleSheet("color: %s;" % (self.text_color))
+            self.date_label_layout = QHBoxLayout()
+            self.date_label_layout.addStretch(1)
+            self.date_label_layout.addWidget(self.date_label)
+            self.layout.addLayout(self.date_label_layout)
+
+        self.setLayout(self.layout)
 
     def paintEvent(self, e):
         p = QPainter(self)
@@ -120,7 +145,7 @@ class MessageBubble(QLabel):
                 p.drawPath(points.GetPath())
         super(MessageBubble, self).paintEvent(e)
 
-    def updateBubble(self, color=None, text_color=None, font_size=None, border_radius=None, content_margins=None):
+    def updateBubble(self, side=None, color=None, text_color=None, font_size=None, border_radius=None, content_margins=None):
         if color:
             self.color = color
         if text_color:
@@ -133,5 +158,5 @@ class MessageBubble(QLabel):
         if content_margins is not None:
             self.content_margins = content_margins
         newfont = QFont("Times", self.font_size)
-        self.setFont(newfont)
+        self.text_label.setFont(newfont)
         self.repaint()

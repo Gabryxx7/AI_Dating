@@ -83,8 +83,8 @@ class ChatWidget(QWidget):
     def setrightTextColor(self, color):
         self.right_text_color = color
 
-    def addBubble(self, text, side=Side.left, color=None, text_color=None, font_size=None, border_radius=None, draw_triangle=True):
-        self.chat_layout.addWidget(MessageWidget(text=text, side=side, color=color, text_color=text_color,
+    def addBubble(self, message, side=Side.left, color=None, text_color=None, font_size=None, border_radius=None, draw_triangle=True):
+        self.chat_layout.addWidget(MessageWidget(message=message, side=side, color=color, text_color=text_color,
                                                  font_size=font_size, border_radius=border_radius, draw_triangle=draw_triangle))
 
     def addMessages(self, messages_list, clear_messages=True,
@@ -153,7 +153,7 @@ class ChatWidget(QWidget):
                     if new_side != side:
                         draw_triangle=True
                     side = new_side
-                    self.addBubble(message['message'], side=side, color=color, text_color=text_color, font_size=font_size, border_radius=border_radius, draw_triangle=draw_triangle)
+                    self.addBubble(message, side=side, color=color, text_color=text_color, font_size=font_size, border_radius=border_radius, draw_triangle=draw_triangle)
             self.scroll_area.verticalScrollBar().setValue(self.scroll_area.verticalScrollBar().maximum())
 
     def get_other_id(self, left_id, right_id, to_id, from_id):
