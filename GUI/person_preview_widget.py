@@ -1,19 +1,29 @@
 from PySide2.QtWidgets import *
 from PySide2.QtCore import *
 from PySide2.QtGui import *
-import utils
 from GUI.log import log
 from GUI.avatar_label import AvatarLabel
 from Threading.data_reloader import ImgLoader
+from datetime import datetime
+import dateutil.parser
+
+class MessagePreviewLabel(QLabel):
+    def paintEvent( self, event ):
+        painter = QPainter(self)
+
+        metrics = QFontMetrics(self.font())
+        elided  = metrics.elidedText(self.text(), Qt.ElideRight, self.width())
+
+        painter.drawText(self.rect(), self.alignment(), elided)
 
 class PersonPreviewWidget(QWidget):
     def __init__(self, parent, data=None, load_images=False, json_viewer=None, chat_widget=None):
         super(PersonPreviewWidget, self).__init__(parent)
         self.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Expanding)
-        self.layout = QHBoxLayout()
-        self.layout.setAlignment(Qt.AlignTop | Qt.AlignLeft)
-        self.layout.setContentsMargins(0,0,0,0)
-        self.setLayout(self.layout)
+        self.main_hlayout = QHBoxLayout()
+        self.main_hlayout.setAlignment(Qt.AlignTop | Qt.AlignLeft)
+        self.main_hlayout.setContentsMargins(0,0,0,0)
+        self.setLayout(self.main_hlayout)
 
         self.load_images = load_images
 
@@ -34,51 +44,65 @@ class PersonPreviewWidget(QWidget):
         self.processed_photos_pixmap = None
         self.name = ""
         self.id = ""
-        self.first_message = ""
+        self.preview_message = ""
         self.match_id = None
         self.messages = None
-
-        self.get_msgs_button = QPushButton("Messages")
-        self.get_msgs_button.setVisible(False)
-        self.get_msgs_button.clicked.connect(self.get_messages)
-        # self.get_msgs_button.setAlignment(Qt.AlignRights | Qt.AlignVCenter)
-
-        self.info_button = QPushButton("Get info")
-        self.info_button.setVisible(False)
-        self.info_button.clicked.connect(self.get_match_info)
-
-        self.name_label = QLabel(self.name)
-        self.name_label.setAlignment(Qt.AlignLeft | Qt.AlignVCenter)
-        self.name_label.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Expanding)
-        self.name_label.setContentsMargins(10,0,10,0)
-        self.name_label.setStyleSheet("""
-            .QLabel{
-                font-weight: bold;
-                font-size: 18px;
-            }""")
-
-        self.message_preview = QLabel(self.first_message)
-        self.message_preview.setAlignment(Qt.AlignLeft | Qt.AlignVCenter)
-        self.message_preview.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Expanding)
-        self.message_preview.setContentsMargins(10,0,10,0)
-        self.message_preview.setStyleSheet("""
-                    .QLabel{
-                        font-size: 14px;
-                    }""")
 
         self.profile_pic = AvatarLabel("", QSize(100,100))
         self.profile_pic.setAlignment(Qt.AlignLeft | Qt.AlignTop)
         self.profile_pic.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Expanding)
+        #
+        # self.get_msgs_button = QPushButton("Messages")
+        # self.get_msgs_button.setVisible(False)
+        # self.get_msgs_button.clicked.connect(self.get_messages)
+        # # self.get_msgs_button.setAlignment(Qt.AlignRights | Qt.AlignVCenter)
+        #
+        # self.info_button = QPushButton("Get info")
+        # self.info_button.setVisible(False)
+        # self.info_button.clicked.connect(self.get_match_info)
 
-        self.layout.addWidget(self.profile_pic)
+        self.name_label = QLabel(self.name)
+        self.name_label.setAlignment(Qt.AlignLeft | Qt.AlignTop)
+        self.name_label.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Expanding)
+        self.name_label.setStyleSheet("""
+                /* font-weight: bold; */
+                font-size: 12pt;
+            """)
+
+        self.message_preview = QLabel()
+        self.message_preview.setAlignment(Qt.AlignLeft | Qt.AlignVCenter)
+        self.message_preview.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Expanding)
+        self.message_preview.setStyleSheet("""
+                        font-size: 9pt;
+                        color: #ABABAB;
+                    """)
+
+        self.message_preview_time = QLabel()
+        self.message_preview_time.setAlignment(Qt.AlignRight | Qt.AlignBottom)
+        self.message_preview_time.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Expanding)
+        self.message_preview_time.setStyleSheet("""
+                        font-size: 8pt;
+                        color: #bcb2d1;
+                    """)
+
+        self.main_hlayout.addWidget(self.profile_pic)
         preview_layout = QVBoxLayout()
-        preview_layout.addWidget(self.name_label)
-        preview_layout.addWidget(self.message_preview)
-        self.layout.addLayout(preview_layout)
-        self.layout.addStretch(1)
-        self.layout.addWidget(self.get_msgs_button)
-        self.layout.addWidget(self.info_button)
-        self.layout.addStretch(2)
+        preview_layout.setContentsMargins(10,15,10,15)
+
+        name_time_layout = QHBoxLayout()
+        name_time_layout.addWidget(self.name_label)
+        name_time_layout.addStretch(1)
+        name_time_layout.addWidget(self.message_preview_time)
+
+        message_layout = QHBoxLayout()
+        message_layout.addWidget(self.message_preview)
+        message_layout.addStretch(1)
+
+        preview_layout.addLayout(name_time_layout)
+        preview_layout.addLayout(message_layout)
+        self.main_hlayout.addLayout(preview_layout)
+        # self.main_hlayout.addWidget(self.get_msgs_button)
+        # self.main_hlayout.addWidget(self.info_button)
 
         self.setStyleSheet("""
             QWidget > QWidget{
@@ -136,10 +160,10 @@ class PersonPreviewWidget(QWidget):
                         self.id = person['_id']
                 if 'messages' in data and len(data['messages']) > 0:
                     self.messages = data['messages']
-                    self.first_message = data['messages'][0]['message']
+                    self.preview_message = data['messages'][0]
                 else:
                     self.messages = None
-                    self.first_message = ""
+                    self.preview_message = None
                 if "message_count" in data: # for unread messages
                     self.match_id = data["_id"]
 
@@ -157,9 +181,20 @@ class PersonPreviewWidget(QWidget):
                 log.e("PersonWidget", "Exception list person's data: " + str(e))
 
         self.name_label.setText(self.name)
-        self.message_preview.setText(self.first_message)
+        if self.preview_message is not None:
+            msg = self.preview_message['message']
+            if self.preview_message["from"] in self.app.profile_info["_id"]:
+                msg = "<font color='#8389b4'> You: </font>" + msg
+            self.message_preview.setText(msg)
+            try:
+                # 2020-04-30T05:48:05.684Z
+                date_obj = dateutil.parser.isoparse(self.preview_message['sent_date'])
+                self.message_preview_time.setText(date_obj.strftime("%m.%d.%y %H:%M"))
+            except Exception as e:
+                print("EXCEPTION: " +str(e))
+                self.message_preview_time.setText("")
         # self.info_button.setVisible(self.json_viewer is not None and person is not None)
-        self.get_msgs_button.setVisible(self.match_id is not None)
+        # self.get_msgs_button.setVisible(self.match_id is not None)
 
     def load_images_async(self, photos_paths, imgLoadedCallback):
         obj = ImgLoader(photos_paths)  # no parent!
@@ -199,3 +234,4 @@ class PersonPreviewWidget(QWidget):
         if self.chat_widget is not None:
             self.chat_widget.addMessages(messages_list=self.messages, clear_messages=True)
             # self.chat_widget.addMessages(messages_list=self.messages, clear_messages=True)
+        self.adjustSize()

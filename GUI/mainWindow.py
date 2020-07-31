@@ -74,36 +74,33 @@ class MainWindow(QMainWindow):
         self.main_widget = QWidget()
         self.main_hlayout = QHBoxLayout()
         self.main_hlayout.setContentsMargins(0,0,0,0)
+        self.main_widget.setLayout(self.main_hlayout)
+        self.setCentralWidget(self.main_widget)
+
         self.main_vlayout = QVBoxLayout()
         self.main_vlayout.setContentsMargins(0,0,0,0)
-        self.lists_hlayout = QHBoxLayout()
-        self.lists_hlayout.setContentsMargins(0,0,0,0)
+        self.chat_layout = QHBoxLayout()
+        self.chat_layout.setContentsMargins(0,0,0,0)
 
         self.recommendations_list = PeopleList(self, "Recommendations", json_viewer=self.json_view,chat_widget=self.chat_widget)
         self.matches_list = PeopleList(self, "Matches", json_viewer=self.json_view,chat_widget=self.chat_widget)
+        self.lists_layout = QVBoxLayout()
+        self.lists_layout.addWidget(self.matches_list, 50)
+        self.lists_layout.addWidget(self.recommendations_list, 50)
+
         self.features_panel = FeaturesButtonList(self)
 
-        self.lists_hlayout.addWidget(self.chat_widget)
-        self.main_vlayout.addLayout(self.lists_hlayout, 70)
+        self.chat_layout.addWidget(self.chat_widget)
+        self.main_vlayout.addWidget(self.json_view, 70)
         self.main_vlayout.addWidget(log.logWidget, 30)
 
-        self.main_hlayout.addWidget(self.matches_list, 30)
-        # self.main_hlayout.addWidget(self.recommendations_list, 30)
-        self.main_hlayout.addWidget(self.json_view, 10)
-        self.main_hlayout.addLayout(self.main_vlayout, 20)
+        self.main_hlayout.addLayout(self.lists_layout, 30)
+        self.main_hlayout.addLayout(self.chat_layout, 40)
+        self.main_hlayout.addLayout(self.main_vlayout, 10)
         self.main_hlayout.addWidget(self.features_panel, 10)
 
-        self.main_widget.setLayout(self.main_hlayout)
-        self.setCentralWidget(self.main_widget)
         self.centralWidget().layout().setContentsMargins(0,0,0,0)
         self.centralWidget().setContentsMargins(0,0,0,0)
-
-        self.setStyleSheet("""
-            QMainWindow {
-                padding: 0px
-            }
-
-            """)
 
     def verify_login(self):
         self.app.verify_login(True, self.app.login_verified)

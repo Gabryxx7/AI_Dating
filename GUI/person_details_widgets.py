@@ -36,18 +36,17 @@ class PersonDetailsWidget(QWidget):
         self.name_label.setAlignment(Qt.AlignHCenter | Qt.AlignVCenter)
         self.name_label.setContentsMargins(10,0,10,0)
         self.name_label.setStyleSheet("""
-            .QLabel{
                 font-weight: bold;
-                font-size: 18%;
-            }""")
+                font-size: 18pt;
+                """)
 
         self.bio_label = QLabel(self.bio)
+        self.bio_label.setWordWrap(True)
         self.bio_label.setAlignment(Qt.AlignLeft | Qt.AlignVCenter)
         self.bio_label.setContentsMargins(10,0,10,0)
         self.bio_label.setStyleSheet("""
-                    .QLabel{
-                        font-size: 11%;
-                    }""")
+                        font-size: 11pt;
+                        """)
 
         self.profile_pic = AvatarLabel("", QSize(250,250))
         self.profile_pic.setAlignment(Qt.AlignHCenter | Qt.AlignTop)

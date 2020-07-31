@@ -1,7 +1,9 @@
 from PySide2.QtWidgets import *
 from PySide2.QtCore import *
 from PySide2.QtGui import *
-from GUI.message_bubble import MessageWidget
+from GUI.message_bubble import MessageWidget, Side
+from datetime import datetime
+import dateutil.parser
 
 
 class ChatWidget(QWidget):
@@ -58,8 +60,6 @@ class ChatWidget(QWidget):
         self.config_file = self.parent.app.config_file
         self.statusBar = self.parent.statusBar
 
-        # self.addMessages(messages_list)
-
     def clearMessages(self):
         for i in reversed(range(self.chat_layout.count())):
             widgetToRemove = self.chat_layout.itemAt(i).widget()
@@ -83,13 +83,9 @@ class ChatWidget(QWidget):
     def setrightTextColor(self, color):
         self.right_text_color = color
 
-    def addMessage(self, text, left=False, color=None, text_color=None, font_size=None, border_radius=None):
-        is_first = True
-        lastMessageWidget = self.chat_layout.itemAt(self.chat_layout.count()-1).widget()
-        if isinstance(lastMessageWidget, MessageWidget):
-            is_first =  (left != lastMessageWidget.left)
-        self.chat_layout.addWidget(MessageWidget(text=text, left=left, color=color, text_color=text_color,
-                                                 font_size=font_size, border_radius=border_radius, draw_triangle=is_first))
+    def addBubble(self, text, side=Side.left, color=None, text_color=None, font_size=None, border_radius=None, draw_triangle=True):
+        self.chat_layout.addWidget(MessageWidget(text=text, side=side, color=color, text_color=text_color,
+                                                 font_size=font_size, border_radius=border_radius, draw_triangle=draw_triangle))
 
     def addMessages(self, messages_list, clear_messages=True,
                     new_left_id=None, new_left_color=None, new_left_text_color=None,
@@ -100,11 +96,12 @@ class ChatWidget(QWidget):
         if clear_messages:
             self.clearMessages()
         if messages_list is not None:
+            date=None
+            side=None
+            color=None
+            text_color=None
             for message in reversed(messages_list):
-                if isinstance(message, str):
-                    self.addMessage(message)
-                elif isinstance(message, dict):
-
+                if isinstance(message, dict):
                     # If we haven't set the ids yet (only for the first message)
                     # order of ids: new_id -> self.id -> message_to/from
                     if right_id is None and left_id is None:
@@ -133,12 +130,31 @@ class ChatWidget(QWidget):
                         # log.d("CHAT2", "right_color " + str(right_color))
                         # log.d("CHAT2", "left_text_color " + str(left_text_color))
                         # log.d("CHAT2", "right_text_color " + str(right_text_color))
-
-                    if str(message['from']) in right_id:
-                        self.addMessage(message['message'], left=True, color=left_color, text_color=left_text_color, font_size=font_size, border_radius=border_radius)
+                    if date is None:
+                        date = dateutil.parser.isoparse(message['sent_date'])
+                        self.addBubble(date.strftime("%m-%d-%Y"), side=Side.center,
+                                        color=left_color, text_color="#BCBCBC", font_size=font_size*0.85,
+                                       border_radius=border_radius*0.8, draw_triangle=False)
                     else:
-                        self.addMessage(message['message'], left=False, color=right_color, text_color=right_text_color, font_size=font_size, border_radius=border_radius)
-        self.scroll_area.verticalScrollBar().setValue(self.scroll_area.verticalScrollBar().maximum())
+                        new_date = dateutil.parser.isoparse(message['sent_date'])
+                        if date.day < new_date.day:
+                            self.addBubble(new_date.strftime("%m-%d-%Y"), side=Side.center,
+                                           color=left_color, text_color="#BCBCBC", font_size=font_size*0.85,
+                                           border_radius=border_radius, draw_triangle=False)
+                        date = new_date
+                    new_side = Side.right
+                    color=right_color
+                    text_color=right_text_color
+                    if str(message['from']) in right_id:
+                        new_side = Side.left
+                        color=left_color
+                        text_color=left_text_color
+                    draw_triangle=False
+                    if new_side != side:
+                        draw_triangle=True
+                    side = new_side
+                    self.addBubble(message['message'], side=side, color=color, text_color=text_color, font_size=font_size, border_radius=border_radius, draw_triangle=draw_triangle)
+            self.scroll_area.verticalScrollBar().setValue(self.scroll_area.verticalScrollBar().maximum())
 
     def get_other_id(self, left_id, right_id, to_id, from_id):
         # So the first person to send a message will be the one on the left
@@ -161,7 +177,6 @@ class ChatWidget(QWidget):
         return final_value
     
     def setControls(self):
-        self.controls_layout = QHBoxLayout()
 
         self.radius_slider_label = QLabel("Radius")
         self.radius_slider = QSlider(Qt.Horizontal)
@@ -195,21 +210,25 @@ class ChatWidget(QWidget):
         self.bg_color_selector_button = QPushButton("Background")
         self.bg_color_selector_button.clicked.connect(self.pick_bg_color)
 
-        self.controls_layout.addWidget(self.radius_slider_label)
-        self.controls_layout.addWidget(self.radius_slider)
-        self.controls_layout.addWidget(self.font_size_slider_label)
-        self.controls_layout.addWidget(self.font_size_slider)
-        self.controls_layout.addWidget(self.content_margins_slider_label)
-        self.controls_layout.addWidget(self.content_margins_slider)
+        self.sliders_layout = QHBoxLayout()
+        self.sliders_layout.addWidget(self.radius_slider_label)
+        self.sliders_layout.addWidget(self.radius_slider)
+        self.sliders_layout.addWidget(self.font_size_slider_label)
+        self.sliders_layout.addWidget(self.font_size_slider)
+        self.sliders_layout.addWidget(self.content_margins_slider_label)
+        self.sliders_layout.addWidget(self.content_margins_slider)
 
-        # self.controls_layout.addWidget(self.left_color_selector_label)
-        self.controls_layout.addWidget(self.left_color_selector_button)
+        self.colors_layout = QHBoxLayout()
+        # self.colors_layout.addWidget(self.left_color_selector_label)
+        self.colors_layout.addWidget(self.left_color_selector_button)
+        # self.colors_layout.addWidget(self.right_color_selector_label)
+        self.colors_layout.addWidget(self.right_color_selector_button)
+        # self.colors_layout.addWidget(self.bg_color_selector_button_label)
+        self.colors_layout.addWidget(self.bg_color_selector_button)
 
-        # self.controls_layout.addWidget(self.right_color_selector_label)
-        self.controls_layout.addWidget(self.right_color_selector_button)
-
-        # self.controls_layout.addWidget(self.bg_color_selector_button_label)
-        self.controls_layout.addWidget(self.bg_color_selector_button)
+        self.controls_layout = QVBoxLayout()
+        self.controls_layout.addLayout(self.sliders_layout)
+        self.controls_layout.addLayout(self.colors_layout)
 
         self.main_layout.addLayout(self.controls_layout)
 
@@ -264,7 +283,7 @@ class ChatWidget(QWidget):
         items = (self.chat_layout.itemAt(i) for i in range(self.chat_layout.count()))
         for w in items:
             if type(w.widget()) == MessageWidget:
-                if w.widget().left:
+                if w.widget().side == Side.left:
                     w.widget().updateBubble(color=self.left_color, font_size=self.font_size, border_radius=self.border_radius, content_margins=self.content_margins)
                 else:
                     w.widget().updateBubble(color=self.right_color, font_size=self.font_size,  border_radius=self.border_radius, content_margins=self.content_margins)
@@ -286,5 +305,5 @@ class ChatWidget(QWidget):
     def send_message(self):
         text = self.chat_box.toPlainText()
         print("Sending: " +text)
-        self.addMessage(text, left=True, color=self.left_color, text_color=self.left_text_color, font_size=self.font_size, border_radius=self.border_radius)
+        self.addBubble(text, side=Side.left, color=self.left_color, text_color=self.left_text_color, font_size=self.font_size, border_radius=self.border_radius)
         self.chat_box.setText("")
