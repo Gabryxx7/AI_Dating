@@ -35,6 +35,17 @@ The message widget is a wrapper made of an hbox that adds a stretch to either le
 class MessageWidget(QWidget):
     # signal_shown = Signal(object)
 
+    def copyBubble(self, otherBubble):
+        self.bubble.message = otherBubble.message
+        self.bubble.side = otherBubble.side
+        self.bubble.text_color = otherBubble.text_color
+        self.bubble.font_size = otherBubble.font_size
+        self.bubble.sent_date_font_size = otherBubble.sent_date_font_size
+        self.bubble.sent_date_text_color = otherBubble.sent_date_text_color
+        self.bubble.border_radius = otherBubble.border_radius
+        self.bubble.draw_bubble_triangle = otherBubble.draw_bubble_triangle
+        self.bubble.bubble_triangle_pos = otherBubble.bubble_triangle_pos
+
     @staticmethod
     def fromMessageBubble(otherBubble):
         kwargs = {}
@@ -47,7 +58,6 @@ class MessageWidget(QWidget):
         kwargs['border_radius'] = otherBubble.border_radius
         kwargs['draw_bubble_triangle'] = otherBubble.draw_bubble_triangle
         kwargs['bubble_triangle_pos'] = otherBubble.bubble_triangle_pos
-
         return MessageWidget(**kwargs)
 
     # def showEvent(self, event):
@@ -57,7 +67,10 @@ class MessageWidget(QWidget):
     def __init__(self, *args, **kwargs):
         super(MessageWidget,self).__init__()
         self.setContentsMargins(0,0,0,0)
-        self.side = kwargs['side']
+        if 'side' in kwargs:
+            self.side = kwargs['side']
+        else:
+            self.side = Side.center
 
         self.bubble = MessageBubble(*args, **kwargs)
 

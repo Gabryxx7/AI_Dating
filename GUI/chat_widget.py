@@ -50,8 +50,6 @@ class ChatWidget(QWidget):
         self.left_id = left_id
         self.right_id = right_id
 
-        self.showing_date = None
-
         self.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Expanding)
         self.main_layout = QVBoxLayout()
         self.main_layout.setContentsMargins(0, 0, 0, 0)
@@ -73,6 +71,12 @@ class ChatWidget(QWidget):
         self.chat_widget.setLayout(self.chat_layout)
         self.scroll_area.setWidget(self.chat_widget)
         self.main_layout.addWidget(self.scroll_area)
+
+        self.showing_date_layout = QVBoxLayout(self.chat_widget)
+        self.showing_date = MessageWidget(self.chat_widget, "Date")
+        self.showing_date.setVisible(False)
+        self.showing_date_layout.addWidget(self.showing_date)
+        self.chat_layout.addLayout(self.showing_date_layout)
 
         if self.bg_color:
             self.chat_widget.setStyleSheet("background-color: %s;" % (self.bg_color))
@@ -155,14 +159,17 @@ class ChatWidget(QWidget):
         self.chat_layout.addWidget(message_widget)
 
     def wheelEvent(self, event):
-        for widget in self.children()[1:]:
-            if not widget.visibleRegion().isEmpty():
-                if isinstance(widget, MessageWidget):
-                    print("Showing " + str(widget.bubble.message))
-                    if widget.side == Side.center:
-                        if self.showing_date is None or widget.bubble.message != self.showing_date.bubble.message:
-                            self.showing_date = MessageWidget.fromMessageBubble(widget.bubble)
-                    self.chat_layout.addWidget(self.showing_date)
+        widget = None
+        for i in range(self.chat_layout.count()):
+            item = self.chat_layout.itemAt(i)
+            if type(item.widget()) == MessageWidget:
+                if item.widget().side == Side.center and not item.widget().visibleRegion().isEmpty():
+                    widget = item.widget()
+        if widget is not None and  widget.bubble.message != self.showing_date.bubble.message:
+            self.showing_date.copyBubble(widget.bubble)
+            self.showing_date.adjustSize()
+            self.showing_date.repaint()
+            print("Showing " + str(widget.bubble.message))
         event.ignore()
 
     def addMessages(self, messages_list, clear_messages=True, left_id=None, right_id=None,
