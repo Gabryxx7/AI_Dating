@@ -1,13 +1,16 @@
+# AI Dating
+## An augmented desktop client for dating apps
+![Screenshot](tinderai.png)
+
 I have been looking to start a fun project in python for a while now. 
-I haven't used python much except for simple scripts to quickly deal with a large amount of files.
+I had not used python much except for simple scripts to quickly deal with a large amount of files.
 
 This time I decided to make a slighly more complex project, more specifically I wanted to work with:
-- GUI
-- Multithreading
-- Network
-- Data Scarping
-- Machine learning and AI
-- Bundle up and release a python program
+- GUI with Qt (Started with `pyqt5` and moved to `pyside2`)
+- Multithreading (Useing `QThreadPools`)
+- Networking and Data Scraping (using `roborowser` and `request`)
+- Machine learning and AI (using `tensorflow` `nltk` and `opencv`)
+- Bundle up and release a python program (Tried `py2app` and `py2exe` but ended up using `pyinstaller`)
 
 So far I managed to implement a simple GUI using `Qt for Python` started with `PyQt5` and moved to `PySide2` halfway.
 
@@ -15,7 +18,7 @@ The GUI is responsive and everything is done in the background through `QThread`
 
 The API is a reworked and extended version of: https://github.com/fbessez/Tinder
 
-So far this tool is nothing but a horrible Desktop version of Tinder.
+So far this tool is nothing but a horrible Desktop client for Tinder, but I am determined to keep working on this project! I swear I won't move on to the next random project as we all do!
 
 ### [WIP] List of features:
 - Download recommendations in the area
