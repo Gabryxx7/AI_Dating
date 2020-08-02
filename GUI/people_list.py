@@ -7,7 +7,7 @@ from Threading.data_reloader import ImgLoader
 
 
 class PeopleList(QWidget):
-    def __init__(self, parent, title, json_viewer=None, chat_widget=None):
+    def __init__(self, parent, title, json_viewer=None, chat_widget=None, data_dashboard=None):
         super(PeopleList, self).__init__(parent)
         self.layout = QVBoxLayout()
         self.parent = parent
@@ -18,6 +18,8 @@ class PeopleList(QWidget):
 
         self.json_viewer = json_viewer
         self.chat_widget = chat_widget
+        self.data_dashboard = data_dashboard
+
         self.search_box = QLineEdit()
         self.search_box.setPlaceholderText("Search "+title +"...")
         self.layout.addWidget(self.search_box)
@@ -91,7 +93,7 @@ class PeopleList(QWidget):
             photos_path_list = []
             for data in data_list:
                 try:
-                    person_widget = PersonPreviewWidget(self, data=data, json_viewer=self.json_viewer, chat_widget=self.chat_widget)
+                    person_widget = PersonPreviewWidget(self, data=data, json_viewer=self.json_viewer, chat_widget=self.chat_widget, data_dashboard=self.data_dashboard)
                     itemN = QListWidgetItem()
                     # Add widget to QListWidget funList
                     itemN.setSizeHint(person_widget.sizeHint())

@@ -17,7 +17,7 @@ class MessagePreviewLabel(QLabel):
         painter.drawText(self.rect(), self.alignment(), elided)
 
 class PersonPreviewWidget(QWidget):
-    def __init__(self, parent, data=None, load_images=False, json_viewer=None, chat_widget=None):
+    def __init__(self, parent, data=None, load_images=False, json_viewer=None, chat_widget=None, data_dashboard=None):
         super(PersonPreviewWidget, self).__init__(parent)
         self.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Expanding)
         self.main_hlayout = QHBoxLayout()
@@ -35,6 +35,7 @@ class PersonPreviewWidget(QWidget):
 
         self.json_viewer = json_viewer
         self.chat_widget = chat_widget
+        self.data_dashboard = data_dashboard
 
         self.data = data
         self.base_path = ""
@@ -234,4 +235,6 @@ class PersonPreviewWidget(QWidget):
         if self.chat_widget is not None:
             self.chat_widget.addMessages(messages_list=self.messages, clear_messages=True)
             # self.chat_widget.addMessages(messages_list=self.messages, clear_messages=True)
+        if self.data_dashboard is not None and self.messages is not None:
+            self.data_dashboard.update_messages(self.messages, self.app.profile_info['_id'])
         self.adjustSize()

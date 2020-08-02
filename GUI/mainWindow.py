@@ -1,6 +1,7 @@
 from PySide2.QtGui import *
 from PySide2.QtWidgets import *
 from PySide2.QtCore import *
+from PySide2.QtWebEngineWidgets import *
 import json
 from GUI.people_list import PeopleList
 from GUI.log_widget import LogWidget
@@ -12,6 +13,7 @@ from GUI.customwaitingwidget import QtCustomWaitingSpinner
 from GUI.vline_widget import VLine
 from GUI.waitingspinnerwidget import QtWaitingSpinner
 from GUI.chat_widget import ChatWidget
+from Analysis.messages_dashboard import MessageDashboard
 
 # Subclass QMainWindow to customise your application's main window
 class MainWindow(QMainWindow):
@@ -61,6 +63,12 @@ class MainWindow(QMainWindow):
         toolbar.addAction(recommendations_json_button)
         toolbar.addAction(profile_button)
 
+        self.web = QWebEngineView()
+        self.dashboard = MessageDashboard()
+        self.web.load(QUrl("http://127.0.0.1:8050"))
+        self.web.show()
+        self.web.repaint()
+
         # button_action2 = QAction(QIcon("bug.png"), "Your button2", self)
         # button_action2.setStatusTip("This is your button2")
         # # button_action2.triggered.connect(self.onMyToolBarButtonClick)
@@ -79,18 +87,19 @@ class MainWindow(QMainWindow):
 
         self.main_vlayout = QVBoxLayout()
         self.main_vlayout.setContentsMargins(0,0,0,0)
-        self.chat_layout = QHBoxLayout()
+        self.chat_layout = QVBoxLayout()
         self.chat_layout.setContentsMargins(0,0,0,0)
 
-        self.recommendations_list = PeopleList(self, "Recommendations", json_viewer=self.json_view,chat_widget=self.chat_widget)
-        self.matches_list = PeopleList(self, "Matches", json_viewer=self.json_view,chat_widget=self.chat_widget)
+        self.recommendations_list = PeopleList(self, "Recommendations", json_viewer=self.json_view,chat_widget=self.chat_widget, data_dashboard=self.dashboard)
+        self.matches_list = PeopleList(self, "Matches", json_viewer=self.json_view,chat_widget=self.chat_widget, data_dashboard=self.dashboard)
         self.lists_layout = QVBoxLayout()
         self.lists_layout.addWidget(self.matches_list, 50)
         self.lists_layout.addWidget(self.recommendations_list, 50)
 
         self.features_panel = FeaturesButtonList(self)
 
-        self.chat_layout.addWidget(self.chat_widget)
+        self.chat_layout.addWidget(self.chat_widget, 70)
+        self.chat_layout.addWidget(self.web, 30)
         self.main_vlayout.addWidget(self.json_view, 70)
         self.main_vlayout.addWidget(log.logWidget, 30)
 
